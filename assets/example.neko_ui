@@ -1,28 +1,12 @@
-import "global_theme";
-
-var sky: #7777ff;
-
-style div +pressed {
-  background_color: red;
-}
-
-style div +hovered !disabled {
-  with p {
-    text-size: 16;
-  }
+style div +outer-menu {
+  background-color: #D5A96E;
+  border-color: #5B4A31;
+  border-thickness: 4px;
 }
 
 layout div {
-  +outer-menu
+  class outer-menu;
 
-  background_color: $sky;
-  anchor: top-left;
-
-  with div {
-    // Comment
-
-    anchor: top;
-    width: 150px;
-    height: 100px;
-  }
+  width: 400px;
+  height: 600px;
 }
