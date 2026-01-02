@@ -5,9 +5,8 @@ use bevy::platform::collections::{HashMap, HashSet};
 use crate::parse::NekoMaidParseError;
 use crate::parse::class::parse_class;
 use crate::parse::context::{NekoResult, ParseContext};
-use crate::parse::property::parse_property;
+use crate::parse::property::{UnresolvedPropertyValue, parse_unresolved_property};
 use crate::parse::token::TokenType;
-use crate::parse::value::PropertyValue;
 
 /// Represents a layout in the UI.
 #[derive(Debug, Clone, PartialEq)]
@@ -16,13 +15,29 @@ pub(super) struct Layout {
     pub(super) widget: String,
 
     /// The properties of the layout.
-    pub(super) properties: HashMap<String, PropertyValue>,
+    pub(super) properties: HashMap<String, UnresolvedPropertyValue>,
 
     /// The child layouts.
     pub(super) children: Vec<Layout>,
 
     /// The classes applied to this layout.
-    pub(super) classes: HashSet<String>,
+    pub classes: HashSet<String>,
+
+    /// Whether this layout is an output slot.
+    pub is_output: bool,
+}
+
+impl Layout {
+    /// Create a new layout.
+    pub fn new(widget: String) -> Self {
+        Self {
+            widget,
+            properties: HashMap::new(),
+            children: Vec::new(),
+            classes: HashSet::new(),
+            is_output: false,
+        }
+    }
 }
 
 /// Parses a layout from the input and returns a [`Layout`].
@@ -40,19 +55,14 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
         });
     };
 
-    let mut layout = Layout {
-        widget: widget.clone(),
-        properties: HashMap::new(),
-        children: Vec::new(),
-        classes: HashSet::new(),
-    };
+    let mut layout = Layout::new(widget.clone());
 
     ctx.expect(TokenType::OpenBrace)?;
 
     while let Some(next) = ctx.peek() {
         match next.token_type {
             TokenType::Identifier => {
-                let property = parse_property(ctx)?;
+                let property = parse_unresolved_property(ctx)?;
                 layout.properties.insert(property.name, property.value);
             }
             TokenType::ClassKeyword => {

@@ -4,7 +4,7 @@ use bevy::platform::collections::{HashMap, HashSet};
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::context::{NekoResult, ParseContext};
-use crate::parse::property::parse_property;
+use crate::parse::property::{UnresolvedPropertyValue, parse_unresolved_property};
 use crate::parse::token::TokenType;
 use crate::parse::value::PropertyValue;
 
@@ -14,16 +14,23 @@ pub struct Style {
     /// The selector for the style.
     selector: Selector,
 
+    /// The unresolved properties defined in the style.
+    unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
+
     /// The properties defined in the style.
     properties: HashMap<String, PropertyValue>,
 }
 
 impl Style {
     /// Creates a new Style with the given selector and properties.
-    pub fn new(selector: Selector, properties: HashMap<String, PropertyValue>) -> Self {
+    pub fn new(
+        selector: Selector,
+        unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
+    ) -> Self {
         Self {
             selector,
-            properties,
+            unresolved_properties,
+            properties: HashMap::new(),
         }
     }
 
@@ -45,6 +52,16 @@ impl Style {
     /// Returns a reference to the properties of this style.
     pub fn properties(&self) -> &HashMap<String, PropertyValue> {
         &self.properties
+    }
+
+    /// Resolve properties of this style.
+    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
+        for (name, value) in &self.unresolved_properties {
+            let prop = value.resolve(variables)?;
+            self.properties.insert(name.clone(), prop);
+        }
+
+        Ok(())
     }
 
     /// Merges another style into this one, overriding existing properties, and
@@ -91,7 +108,7 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
     while let Some(next) = ctx.peek() {
         match next.token_type {
             TokenType::Identifier => {
-                let property = parse_property(ctx)?;
+                let property = parse_unresolved_property(ctx)?;
                 properties.insert(property.name, property.value);
             }
             TokenType::WithKeyword => {
@@ -114,10 +131,7 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
 
     ctx.expect(TokenType::CloseBrace)?;
 
-    ctx.add_style(Style {
-        selector,
-        properties,
-    });
+    ctx.add_style(Style::new(selector, properties));
 
     Ok(())
 }

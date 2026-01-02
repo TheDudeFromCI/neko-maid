@@ -1,11 +1,14 @@
 //! Systems used by the NekoMaid plugin.
 
 use bevy::asset::{AssetLoadFailedEvent, LoadState};
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::asset::NekoMaidUI;
 use crate::components::NekoUITree;
+use crate::parse::context::NekoResult;
 use crate::parse::element::NekoElementBuilder;
+use crate::parse::value::PropertyValue;
 
 /// Listens for changes to the [`NekoUITree`] component and spawns the UI tree
 /// accordingly.
@@ -41,10 +44,44 @@ pub(super) fn spawn_tree(
             continue;
         };
 
+        let mut variables = root.variables().clone();
+        for (name, unresolved) in &asset.variables {
+            if variables.contains_key(name) {
+                continue;
+            }
+
+            if let Ok(v) = unresolved.resolve(&variables) {
+                variables.insert(name.clone(), v);
+            }
+        }
+
         for element in &asset.elements {
-            spawn_element(&asset_server, &mut commands, element, entity);
+            let mut element = element.clone();
+            if let Err(e) = resolve_scope(&mut element, &variables) {
+                error!("{}", e);
+            }
+            spawn_element(&asset_server, &mut commands, &element, entity);
         }
     }
+}
+
+/// Resolve variable scope
+pub fn resolve_scope(
+    element: &mut NekoElementBuilder,
+    variables: &HashMap<String, PropertyValue>,
+) -> NekoResult<()> {
+    element.element.resolve(variables)?;
+
+    let mut variables = variables.clone();
+    for (name, value) in element.element.properties() {
+        variables.insert(name.clone(), value.clone());
+    }
+
+    for child in &mut element.children {
+        resolve_scope(child, &variables)?;
+    }
+
+    Ok(())
 }
 
 /// Recursively spawns a [`NekoElementBuilder`] and its children.

@@ -10,15 +10,15 @@ use crate::parse::NekoMaidParseError;
 use crate::parse::element::{NekoElementBuilder, build_element};
 use crate::parse::layout::Layout;
 use crate::parse::module::Module;
+use crate::parse::property::UnresolvedPropertyValue;
 use crate::parse::style::Style;
 use crate::parse::token::{Token, TokenPosition, TokenType, TokenValue};
-use crate::parse::value::PropertyValue;
 use crate::parse::widget::Widget;
 
 /// Context for parsing NekoMaid UI files.
 pub(super) struct ParseContext {
     /// A map of defined variables and their values.
-    variables: HashMap<String, PropertyValue>,
+    variables: HashMap<String, UnresolvedPropertyValue>,
 
     /// A list of defined styles.
     styles: Vec<Style>,
@@ -125,12 +125,12 @@ impl ParseContext {
 
     /// Sets the value of a defined variable. If the variable already exists,
     /// its value is updated.
-    pub(super) fn set_variable(&mut self, name: String, value: PropertyValue) {
+    pub(super) fn set_variable(&mut self, name: String, value: UnresolvedPropertyValue) {
         self.variables.insert(name, value);
     }
 
     /// Gets the value of a defined variable by its name.
-    pub(super) fn get_variable(&self, name: &str) -> Option<&PropertyValue> {
+    pub(super) fn get_variable(&self, name: &str) -> Option<&UnresolvedPropertyValue> {
         self.variables.get(name)
     }
 
@@ -139,8 +139,7 @@ impl ParseContext {
         let mut elements = self.imported_elements;
 
         for layout in self.layouts {
-            let element =
-                build_element(&self.variables, &self.styles, &self.widgets, layout, None)?;
+            let element = build_element(&self.styles, &self.widgets, layout, None)?;
             elements.push(element);
         }
 

@@ -42,7 +42,7 @@ pub(super) struct CustomWidget {
     pub name: String,
 
     /// The default properties of the widget.
-    pub default_properties: HashMap<String, PropertyValue>,
+    pub default_properties: HashMap<String, UnresolvedPropertyValue>,
 
     /// The layout of the widget.
     pub layout: WidgetLayout,

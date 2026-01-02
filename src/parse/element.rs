@@ -9,6 +9,7 @@ use crate::parse::NekoMaidParseError;
 use crate::parse::class::{ClassPath, ClassSet};
 use crate::parse::context::NekoResult;
 use crate::parse::layout::Layout;
+use crate::parse::property::UnresolvedPropertyValue;
 use crate::parse::style::Style;
 use crate::parse::token::TokenPosition;
 use crate::parse::value::PropertyValue;
@@ -36,7 +37,13 @@ pub struct NekoElement {
     /// The styles applied to this element.
     styles: Vec<Style>,
 
-    /// The properties applied to this element.
+    /// The variables in scope for this element.
+    variables: HashMap<String, UnresolvedPropertyValue>,
+
+    /// The properties of this element before variable resolution.
+    unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
+
+    /// The concrete properties applied to this element.
     properties: HashMap<String, PropertyValue>,
 
     /// The default properties of this element, from the native widget.
@@ -84,6 +91,11 @@ impl NekoElement {
         }
     }
 
+    /// Returns a reference to the property map of this element.
+    pub fn properties(&self) -> &HashMap<String, PropertyValue> {
+        &self.properties
+    }
+
     /// Sets a property directly on this element, overriding all styles.
     pub fn set_property(&mut self, name: String, value: PropertyValue) {
         self.properties.insert(name, value);
@@ -108,6 +120,26 @@ impl NekoElement {
         }
 
         self.default_properties.get(name)
+    }
+
+    /// Resolve properties for this element
+    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
+        for style in &mut self.styles {
+            style.resolve(variables)?;
+        }
+
+        let mut variables = variables.clone();
+        for (name, value) in &self.variables {
+            let prop = value.resolve(&variables)?;
+            variables.insert(name.clone(), prop);
+        }
+
+        for (name, value) in &self.unresolved_properties {
+            let prop = value.resolve(&variables)?;
+            self.properties.insert(name.clone(), prop);
+        }
+
+        Ok(())
     }
 
     /// Attempts to get a property and automatically convert it to the desired
@@ -154,7 +186,6 @@ impl NekoElement {
 
 /// Builds a [`NekoElementBuilder`] from the given styles and layout.
 pub(super) fn build_element(
-    global_variables: &HashMap<String, PropertyValue>,
     styles: &[Style],
     widgets: &HashMap<String, Widget>,
     mut layout: Layout,
@@ -185,7 +216,6 @@ pub(super) fn build_element(
             let mut children = Vec::new();
             for child in layout.children {
                 children.push(build_element(
-                    global_variables,
                     styles,
                     widgets,
                     child,
@@ -196,7 +226,9 @@ pub(super) fn build_element(
             let mut element = NekoElement {
                 classpath,
                 styles: Vec::new(),
-                properties: layout.properties,
+                variables: HashMap::new(),
+                unresolved_properties: layout.properties,
+                properties: HashMap::new(),
                 default_properties: native_widget.default_properties.clone(),
             };
 
@@ -211,11 +243,7 @@ pub(super) fn build_element(
             })
         }
         Widget::Custom(custom_widget) => {
-            let mut local_variables = global_variables.clone();
-
-            for (name, value) in custom_widget.default_properties {
-                local_variables.insert(name, value);
-            }
+            let mut local_variables = custom_widget.default_properties.clone();
 
             for (name, value) in layout.properties {
                 local_variables.insert(name, value);
@@ -236,7 +264,7 @@ pub(super) fn build_element(
 /// Builds a [`NekoElementBuilder`] from the given styles and custom widget
 /// layout.
 fn build_widget(
-    variables: &HashMap<String, PropertyValue>,
+    variables: &HashMap<String, UnresolvedPropertyValue>,
     styles: &[Style],
     widgets: &HashMap<String, Widget>,
     layout: WidgetLayout,
@@ -268,7 +296,7 @@ fn build_widget(
             let mut children = Vec::new();
             for child in layout.children {
                 children.push(build_widget(
-                    variables,
+                    &variables,
                     styles,
                     widgets,
                     child,
@@ -280,7 +308,6 @@ fn build_widget(
             if layout.is_output {
                 for child in original_children.drain(..) {
                     children.push(build_element(
-                        variables,
                         styles,
                         widgets,
                         child,
@@ -292,6 +319,8 @@ fn build_widget(
             let mut element = NekoElement {
                 classpath,
                 styles: Vec::new(),
+                variables: variables.clone(),
+                unresolved_properties: HashMap::new(),
                 properties: HashMap::new(),
                 default_properties: native_widget.default_properties.clone(),
             };
@@ -301,8 +330,9 @@ fn build_widget(
             }
 
             for (name, value) in layout.properties {
-                let value = value.resolve(variables)?;
-                element.set_property(name, value);
+                element
+                    .unresolved_properties
+                    .insert(name.clone(), value.clone());
             }
 
             Ok(NekoElementBuilder {
@@ -319,7 +349,6 @@ fn build_widget(
             }
 
             for (name, value) in layout.properties {
-                let value = value.resolve(&local_variables)?;
                 local_variables.insert(name, value);
             }
 

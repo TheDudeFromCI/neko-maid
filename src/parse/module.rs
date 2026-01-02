@@ -7,17 +7,16 @@ use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::element::NekoElementBuilder;
 use crate::parse::import::parse_import;
 use crate::parse::layout::parse_layout;
-use crate::parse::property::parse_variable;
+use crate::parse::property::{UnresolvedPropertyValue, parse_variable};
 use crate::parse::style::{Selector, Style, parse_style};
 use crate::parse::token::TokenType;
-use crate::parse::value::PropertyValue;
 use crate::parse::widget::{Widget, parse_widget};
 
 /// A NekoMaid UI module.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     /// A map of defined variables and their values.
-    pub(crate) variables: HashMap<String, PropertyValue>,
+    pub(crate) variables: HashMap<String, UnresolvedPropertyValue>,
 
     /// A list of defined styles.
     ///
