@@ -3,7 +3,11 @@ name = "neko-maid"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = ["neko_derive"]
+
 [dependencies]
+neko_derive = { path="./neko_derive" }
 bevy = { version = "0.17", default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_render",

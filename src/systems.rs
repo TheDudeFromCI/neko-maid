@@ -6,6 +6,7 @@ use bevy::prelude::*;
 
 use crate::asset::NekoMaidUI;
 use crate::components::NekoUITree;
+use crate::marker::MarkerRegistry;
 use crate::parse::context::NekoResult;
 use crate::parse::element::NekoElementBuilder;
 use crate::parse::value::PropertyValue;
@@ -16,6 +17,7 @@ use crate::parse::value::PropertyValue;
 pub(super) fn spawn_tree(
     asset_server: Res<AssetServer>,
     assets: Res<Assets<NekoMaidUI>>,
+    markers: Res<MarkerRegistry>,
     mut roots: Query<
         (Entity, &mut NekoUITree, &mut Node),
         Or<(Added<NekoUITree>, Changed<NekoUITree>)>,
@@ -60,7 +62,7 @@ pub(super) fn spawn_tree(
             if let Err(e) = resolve_scope(&mut element, &variables) {
                 error!("{}", e);
             }
-            spawn_element(&asset_server, &mut commands, &element, entity);
+            spawn_element(&asset_server, &markers, &mut commands, &element, entity);
         }
     }
 }
@@ -87,15 +89,18 @@ pub fn resolve_scope(
 /// Recursively spawns a [`NekoElementBuilder`] and its children.
 fn spawn_element(
     asset_server: &Res<AssetServer>,
+    markers: &MarkerRegistry,
     commands: &mut Commands,
     element: &NekoElementBuilder,
     parent: Entity,
 ) {
     let entity =
         (element.native_widget.spawn_func)(asset_server, commands, &element.element, parent);
+    
+    markers.insert(commands.entity(entity), &element.element);
 
     for child in &element.children {
-        spawn_element(asset_server, commands, child, entity);
+        spawn_element(asset_server, markers, commands, child, entity);
     }
 }
 

@@ -1,0 +1,83 @@
+
+style div +outer-menu {
+  background-color: #D5A96E;
+  border-color: #5B4A31;
+  border-thickness: 4px;
+  border-radius: 12px;
+}
+
+style div +inner-menu {
+  background-color: #d9ad72;
+  border-color: #c1935b;
+  border-thickness: 4px;
+  border-radius: 12px;
+}
+
+style p +h1 {
+  font-size: 32;
+  color: #000000;
+}
+
+def h1 {
+  var text = "Text";
+
+  layout div {
+    class test;
+    
+    flex-direction: column;
+
+    with p {
+      class h1;
+      text: $text;
+    }
+
+    with div {
+      height: 2px;
+      width: 100%;
+
+      background-color: #614a31;
+      border-radius: 4px;
+    }
+
+    output;
+  }
+}
+
+layout div {
+  class outer-menu;
+
+  flex-direction: column;
+  align-items: center;
+
+  width: 500px;
+  height: 600px;
+
+  margin: auto;
+  padding: 8px;
+  row-gap: 8px;
+
+  with h1 {
+    text: "Outer Menu";
+  }
+
+  with div {
+    class inner-menu;
+
+    width: 100%;
+    flex-grow: 1;
+
+    padding: 8px;
+
+    with p {
+      text: "Hiii";
+      color: #000000;
+    }
+
+    with div {
+      class test;
+      
+      width: 100px;
+      height: 100px;
+    }
+  }
+}
