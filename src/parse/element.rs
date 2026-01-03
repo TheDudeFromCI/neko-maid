@@ -16,22 +16,22 @@ use crate::parse::widget::{NativeWidget, Widget, WidgetLayout};
 
 /// A temporary builder for NekoMaid UI elements for easier construction.
 #[derive(Debug, Clone, PartialEq)]
-pub struct NekoElementBuilder {
+pub(crate) struct NekoElementBuilder {
     /// The native widget associated with this element.
-    pub native_widget: NativeWidget,
+    pub(crate) native_widget: NativeWidget,
 
     /// The NekoElement representing this element.
-    pub element: NekoElement,
+    pub(crate) element: NekoElement,
 
     /// The children of this element.
-    pub children: Vec<NekoElementBuilder>,
+    pub(crate) children: Vec<NekoElementBuilder>,
 }
 
 /// A component representing a NekoMaid UI element.
 #[derive(Debug, Component, Clone, PartialEq)]
 pub struct NekoElement {
     /// The class path of this element.
-    pub(crate) classpath: ClassPath,
+    classpath: ClassPath,
 
     /// The styles applied to this element.
     styles: Vec<Style>,
@@ -47,6 +47,11 @@ impl NekoElement {
     /// Returns a reference to the class path of this element.
     pub fn classpath(&self) -> &ClassPath {
         &self.classpath
+    }
+
+    /// Returns a mutable reference to the class path of this element.
+    pub fn classpath_mut(&mut self) -> &mut ClassPath {
+        &mut self.classpath
     }
 
     /// Returns a reference to the set of classes applied to this element.
@@ -148,7 +153,7 @@ impl NekoElement {
 }
 
 /// Builds a [`NekoElementBuilder`] from the given styles and layout.
-pub fn build_element(
+pub(super) fn build_element(
     global_variables: &HashMap<String, PropertyValue>,
     styles: &[Style],
     widgets: &HashMap<String, Widget>,

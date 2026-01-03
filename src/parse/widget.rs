@@ -17,7 +17,7 @@ use crate::parse::value::PropertyValue;
 
 /// A NekoMaid UI widget definition.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Widget {
+pub(super) enum Widget {
     /// A custom widget defined in NekoMaid UI.
     Custom(CustomWidget),
 
@@ -45,7 +45,7 @@ impl Widget {
 
 /// A custom widget definition.
 #[derive(Debug, Clone, PartialEq)]
-pub struct CustomWidget {
+pub(super) struct CustomWidget {
     /// The name of the widget.
     pub name: String,
 
@@ -94,7 +94,7 @@ impl PartialEq<NativeWidget> for NativeWidget {
 
 /// Represents a layout for a widget definition in the UI.
 #[derive(Debug, Clone, PartialEq)]
-pub struct WidgetLayout {
+pub(super) struct WidgetLayout {
     /// The widget type.
     pub widget: String,
 
@@ -112,7 +112,7 @@ pub struct WidgetLayout {
 }
 
 /// Parses a widget from the input and returns a [`Widget`].
-pub fn parse_widget(ctx: &mut ParseContext) -> NekoResult<Widget> {
+pub(super) fn parse_widget(ctx: &mut ParseContext) -> NekoResult<Widget> {
     ctx.expect(TokenType::DefKeyword)?;
 
     let widget_position = ctx.next_position().unwrap_or_default();
@@ -185,7 +185,7 @@ pub fn parse_widget(ctx: &mut ParseContext) -> NekoResult<Widget> {
 }
 
 /// Parses a layout from the input and returns a [`Layout`].
-pub fn parse_widget_layout(ctx: &mut ParseContext) -> NekoResult<WidgetLayout> {
+pub(super) fn parse_widget_layout(ctx: &mut ParseContext) -> NekoResult<WidgetLayout> {
     ctx.maybe_consume(TokenType::LayoutKeyword);
     ctx.maybe_consume(TokenType::WithKeyword);
 

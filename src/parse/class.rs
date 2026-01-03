@@ -126,7 +126,7 @@ impl ClassSet {
 }
 
 /// Parses a class from the input and returns the class name as a string.
-pub fn parse_class(ctx: &mut ParseContext) -> NekoResult<String> {
+pub(super) fn parse_class(ctx: &mut ParseContext) -> NekoResult<String> {
     ctx.expect(TokenType::ClassKeyword)?;
     let class_name = ctx.expect_as_string(TokenType::Identifier)?;
     ctx.expect(TokenType::Semicolon)?;

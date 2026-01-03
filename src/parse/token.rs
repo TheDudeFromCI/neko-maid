@@ -9,7 +9,7 @@ use crate::parse::value::PropertyValue;
 
 /// A token with its type and position.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Token {
+pub(super) struct Token {
     /// The type of the token.
     pub token_type: TokenType,
 
@@ -23,7 +23,7 @@ pub struct Token {
 impl Token {
     /// Converts the token value to a string, if possible. Otherwise, returns an
     /// error.
-    pub fn into_string_property(
+    pub(super) fn into_string_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -39,7 +39,7 @@ impl Token {
 
     /// Converts the token value to a number, if possible. Otherwise, returns an
     /// error.
-    pub fn into_number_property(
+    pub(super) fn into_number_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -55,7 +55,7 @@ impl Token {
 
     /// Converts the token value to a color, if possible. Otherwise, returns an
     /// error.
-    pub fn into_color_property(
+    pub(super) fn into_color_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -71,7 +71,7 @@ impl Token {
 
     /// Converts the token value to a boolean, if possible. Otherwise, returns
     /// an error.
-    pub fn into_boolean_property(
+    pub(super) fn into_boolean_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -87,7 +87,7 @@ impl Token {
 
     /// Converts the token value to a pixel number, if possible. Otherwise,
     /// returns an error.
-    pub fn into_pixels_property(
+    pub(super) fn into_pixels_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -103,7 +103,7 @@ impl Token {
 
     /// Converts the token value to a percentage number, if possible. Otherwise,
     /// returns an error.
-    pub fn into_percent_property(
+    pub(super) fn into_percent_property(
         self,
         position: TokenPosition,
     ) -> Result<PropertyValue, NekoMaidParseError> {
@@ -119,7 +119,10 @@ impl Token {
 
     /// Converts the token value to a variable name string, if possible.
     /// Otherwise, returns an error.
-    pub fn into_variable_name(self, position: TokenPosition) -> Result<String, NekoMaidParseError> {
+    pub(super) fn into_variable_name(
+        self,
+        position: TokenPosition,
+    ) -> Result<String, NekoMaidParseError> {
         match self.value {
             TokenValue::String(s) => Ok(s),
             v => Err(NekoMaidParseError::InvalidTokenValue {
@@ -133,7 +136,7 @@ impl Token {
 
 /// The value stored within a token.
 #[derive(Debug, Clone, PartialEq)]
-pub enum TokenValue {
+pub(super) enum TokenValue {
     /// Used for tokens that do not carry a specific value, such as keywords or
     /// symbols.
     None,
@@ -149,51 +152,6 @@ pub enum TokenValue {
 
     /// A boolean literal.
     Boolean(bool),
-}
-
-impl TokenValue {
-    /// Returns the name of the token value type.
-    pub fn type_name(&self) -> &'static str {
-        match self {
-            TokenValue::None => "none",
-            TokenValue::String(_) => "string",
-            TokenValue::Number(_) => "number",
-            TokenValue::Color(_) => "color",
-            TokenValue::Boolean(_) => "boolean",
-        }
-    }
-
-    /// Attempts to extract the numeric value from the token.
-    pub fn as_number(self) -> Option<f64> {
-        match self {
-            TokenValue::Number(n) => Some(n),
-            _ => None,
-        }
-    }
-
-    /// Attempts to extract the string value from the token.
-    pub fn as_string(self) -> Option<String> {
-        match self {
-            TokenValue::String(s) => Some(s),
-            _ => None,
-        }
-    }
-
-    /// Attempts to extract the boolean value from the token.
-    pub fn as_boolean(self) -> Option<bool> {
-        match self {
-            TokenValue::Boolean(b) => Some(b),
-            _ => None,
-        }
-    }
-
-    /// Attempts to extract the color value from the token.
-    pub fn as_color(self) -> Option<Color> {
-        match self {
-            TokenValue::Color(c) => Some(c),
-            _ => None,
-        }
-    }
 }
 
 impl From<&str> for TokenValue {
@@ -234,7 +192,7 @@ impl From<Color> for TokenValue {
 
 /// A token representing a lexical unit in the NekoMaid UI file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TokenType {
+pub(super) enum TokenType {
     // === Symbols ===
     /// The plus symbol.
     Plus,
@@ -318,7 +276,7 @@ pub enum TokenType {
 
 impl TokenType {
     /// Returns the name of the token type.
-    pub fn type_name(&self) -> &'static str {
+    pub(super) fn type_name(&self) -> &'static str {
         match self {
             TokenType::Plus => "+",
             TokenType::Exclamation => "!",
@@ -349,7 +307,7 @@ impl TokenType {
     }
 
     /// Returns true if the token type represents a string value.
-    pub fn has_string(&self) -> bool {
+    pub(super) fn has_string(&self) -> bool {
         matches!(
             self,
             TokenType::Identifier | TokenType::StringLiteral | TokenType::Variable
@@ -357,7 +315,7 @@ impl TokenType {
     }
 
     /// Returns true if the token type represents a numeric value.
-    pub fn has_number(&self) -> bool {
+    pub(super) fn has_number(&self) -> bool {
         matches!(
             self,
             TokenType::NumberLiteral | TokenType::PercentLiteral | TokenType::PixelsLiteral
@@ -365,17 +323,17 @@ impl TokenType {
     }
 
     /// Returns true if the token type represents a boolean value.
-    pub fn has_boolean(&self) -> bool {
+    pub(super) fn has_boolean(&self) -> bool {
         matches!(self, TokenType::BooleanLiteral)
     }
 
     /// Returns true if the token type represents a color value.
-    pub fn has_color(&self) -> bool {
+    pub(super) fn has_color(&self) -> bool {
         matches!(self, TokenType::ColorLiteral)
     }
 
     /// Returns true if the token type should be ignored by the tokenizer.
-    pub fn is_ignore(&self) -> bool {
+    pub(super) fn is_ignore(&self) -> bool {
         matches!(self, TokenType::Comment | TokenType::EndOfStream)
     }
 }

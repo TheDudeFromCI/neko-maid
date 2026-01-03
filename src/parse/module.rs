@@ -17,18 +17,18 @@ use crate::parse::widget::{Widget, parse_widget};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     /// A map of defined variables and their values.
-    pub variables: HashMap<String, PropertyValue>,
+    pub(crate) variables: HashMap<String, PropertyValue>,
 
     /// A list of defined styles.
     ///
     /// Styles later in the list have higher precedence.
-    pub styles: Vec<Style>,
+    pub(crate) styles: Vec<Style>,
 
     /// A map of available widgets. (Both native and user-defined)
-    pub widgets: HashMap<String, Widget>,
+    pub(super) widgets: HashMap<String, Widget>,
 
     /// A list of elements defined in this module, ready to be instantiated.
-    pub elements: Vec<NekoElementBuilder>,
+    pub(crate) elements: Vec<NekoElementBuilder>,
 }
 
 /// Parses a module from the given parse context.

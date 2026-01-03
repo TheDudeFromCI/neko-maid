@@ -11,22 +11,22 @@ use crate::parse::value::PropertyValue;
 
 /// Represents a layout in the UI.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Layout {
+pub(super) struct Layout {
     /// The widget type.
-    pub widget: String,
+    pub(super) widget: String,
 
     /// The properties of the layout.
-    pub properties: HashMap<String, PropertyValue>,
+    pub(super) properties: HashMap<String, PropertyValue>,
 
     /// The child layouts.
-    pub children: Vec<Layout>,
+    pub(super) children: Vec<Layout>,
 
     /// The classes applied to this layout.
-    pub classes: HashSet<String>,
+    pub(super) classes: HashSet<String>,
 }
 
 /// Parses a layout from the input and returns a [`Layout`].
-pub fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
+pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
     ctx.maybe_consume(TokenType::LayoutKeyword);
     ctx.maybe_consume(TokenType::WithKeyword);
 

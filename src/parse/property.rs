@@ -12,27 +12,27 @@ use crate::parse::value::PropertyValue;
 
 /// A property within a style or element.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Property {
+pub(super) struct Property {
     /// The name of the property.
-    pub name: String,
+    pub(super) name: String,
 
     /// The value of the property.
-    pub value: PropertyValue,
+    pub(super) value: PropertyValue,
 }
 
 /// A property within a style or element.
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnresolvedProperty {
+pub(super) struct UnresolvedProperty {
     /// The name of the property.
-    pub name: String,
+    pub(super) name: String,
 
     /// The value of the property.
-    pub value: UnresolvedPropertyValue,
+    pub(super) value: UnresolvedPropertyValue,
 }
 
 /// An unresolved property value that may be a constant or a variable reference.
 #[derive(Debug, Clone, PartialEq)]
-pub enum UnresolvedPropertyValue {
+pub(super) enum UnresolvedPropertyValue {
     /// A constant property value.
     Constant(PropertyValue),
 
@@ -42,7 +42,10 @@ pub enum UnresolvedPropertyValue {
 
 impl UnresolvedPropertyValue {
     /// Resolves the property value using the provided variable map.
-    pub fn resolve(&self, variables: &HashMap<String, PropertyValue>) -> NekoResult<PropertyValue> {
+    pub(super) fn resolve(
+        &self,
+        variables: &HashMap<String, PropertyValue>,
+    ) -> NekoResult<PropertyValue> {
         match self {
             UnresolvedPropertyValue::Constant(v) => Ok(v.clone()),
             UnresolvedPropertyValue::Variable(var_name) => {
@@ -96,7 +99,7 @@ impl fmt::Display for PropertyType {
 }
 
 /// Parses a property from the input and returns a [`Property`].
-pub fn parse_property(ctx: &mut ParseContext) -> NekoResult<Property> {
+pub(super) fn parse_property(ctx: &mut ParseContext) -> NekoResult<Property> {
     let name = ctx.expect_as_string(TokenType::Identifier)?;
     ctx.expect(TokenType::Colon)?;
     let value = parse_value(ctx)?;
@@ -107,7 +110,7 @@ pub fn parse_property(ctx: &mut ParseContext) -> NekoResult<Property> {
 
 /// Parses an unresolved property from the input and returns a
 /// [`UnresolvedProperty`].
-pub fn parse_unresolved_property(ctx: &mut ParseContext) -> NekoResult<UnresolvedProperty> {
+pub(super) fn parse_unresolved_property(ctx: &mut ParseContext) -> NekoResult<UnresolvedProperty> {
     let name = ctx.expect_as_string(TokenType::Identifier)?;
     ctx.expect(TokenType::Colon)?;
     let value = parse_unresolved_value(ctx)?;
@@ -117,7 +120,7 @@ pub fn parse_unresolved_property(ctx: &mut ParseContext) -> NekoResult<Unresolve
 }
 
 /// Parses a variable declaration from the input and returns a [`Property`].
-pub fn parse_variable(ctx: &mut ParseContext) -> NekoResult<Property> {
+pub(super) fn parse_variable(ctx: &mut ParseContext) -> NekoResult<Property> {
     ctx.expect(TokenType::VarKeyword)?;
     let name = ctx.expect_as_string(TokenType::Identifier)?;
     ctx.expect(TokenType::Equals)?;
@@ -129,7 +132,9 @@ pub fn parse_variable(ctx: &mut ParseContext) -> NekoResult<Property> {
 
 /// Parses an unresolved property value from the input and returns a
 /// [`UnresolvedPropertyValue`].
-pub fn parse_unresolved_value(ctx: &mut ParseContext) -> NekoResult<UnresolvedPropertyValue> {
+pub(super) fn parse_unresolved_value(
+    ctx: &mut ParseContext,
+) -> NekoResult<UnresolvedPropertyValue> {
     let next_pos = ctx.next_position().unwrap_or_default();
     let next = ctx.consume()?;
 
@@ -174,7 +179,7 @@ pub fn parse_unresolved_value(ctx: &mut ParseContext) -> NekoResult<UnresolvedPr
 }
 
 /// Parses a property value from the input and returns a [`PropertyValue`].
-pub fn parse_value(ctx: &mut ParseContext) -> NekoResult<PropertyValue> {
+pub(super) fn parse_value(ctx: &mut ParseContext) -> NekoResult<PropertyValue> {
     let next_pos = ctx.next_position().unwrap_or_default();
     let value = parse_unresolved_value(ctx)?;
     match value {

@@ -77,7 +77,7 @@ pub struct SelectorPart {
 }
 
 /// Parses a style from the given parse context.
-pub fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> NekoResult<()> {
+pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> NekoResult<()> {
     ctx.maybe_consume(TokenType::StyleKeyword);
     ctx.maybe_consume(TokenType::WithKeyword);
 
@@ -123,7 +123,7 @@ pub fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> NekoResult
 }
 
 /// Parses a style selector part from the input and returns a [`SelectorPart`].
-pub fn parse_style_selector(ctx: &mut ParseContext) -> NekoResult<SelectorPart> {
+pub(super) fn parse_style_selector(ctx: &mut ParseContext) -> NekoResult<SelectorPart> {
     let widget_position = ctx.next_position().unwrap_or_default();
     let widget = ctx.expect_as_string(TokenType::Identifier)?;
 

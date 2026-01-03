@@ -72,13 +72,13 @@ impl Default for CodePos {
 }
 
 /// A tokenizer for parsing source code into tokens.
-pub struct Tokenizer;
+pub(crate) struct Tokenizer;
 impl Tokenizer {
     /// Tokenizes the given source code into a vector of tokens.
     ///
     /// Tokens marked as "ignore" (e.g., whitespace, comments) are omitted from
     /// the resulting vector.
-    pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenizeError> {
+    pub(super) fn tokenize(code: &str) -> Result<Vec<Token>, TokenizeError> {
         let mut position = CodePos::default();
         let mut tokens = Vec::new();
 
