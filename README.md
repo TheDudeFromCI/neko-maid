@@ -58,6 +58,8 @@ This project also adds several high-level widgets to make getting started with c
 
 ## Installation
 
+*(coming soon)*
+
 This crate can be installed using:
 
 ```bash
