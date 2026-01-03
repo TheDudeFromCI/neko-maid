@@ -52,21 +52,7 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
     while let Some(next) = ctx.peek() {
         match next.token_type {
             TokenType::Identifier => {
-                let name_position = ctx.next_position().unwrap_or_default();
                 let property = parse_property(ctx)?;
-
-                if !ctx
-                    .get_widget(&widget)
-                    .expect("Widget should exist as checked earlier")
-                    .has_property(&property.name)
-                {
-                    return Err(NekoMaidParseError::InvalidProperty {
-                        property: property.name,
-                        widget: widget.clone(),
-                        position: name_position,
-                    });
-                }
-
                 layout.properties.insert(property.name, property.value);
             }
             TokenType::ClassKeyword => {

@@ -108,19 +108,6 @@ pub enum NekoMaidParseError {
         position: TokenPosition,
     },
 
-    /// The property name is invalid.
-    #[error("Invalid property '{property}' for {widget}, at {position}")]
-    InvalidProperty {
-        /// The invalid property name.
-        property: String,
-
-        /// The widget the property was applied to.
-        widget: String,
-
-        /// The position of the property in the source code.
-        position: TokenPosition,
-    },
-
     /// An error indicating that a variable could not be found.
     #[error("Variable not found: {variable}, at {position}")]
     VariableNotFound {

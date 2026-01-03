@@ -33,14 +33,6 @@ impl Widget {
             Widget::Native(native) => &native.name,
         }
     }
-
-    /// Checks if the widget has a property with the given name.
-    pub fn has_property(&self, property_name: &str) -> bool {
-        match self {
-            Widget::Custom(custom) => custom.has_property(property_name),
-            Widget::Native(native) => native.has_property(property_name),
-        }
-    }
 }
 
 /// A custom widget definition.
@@ -54,13 +46,6 @@ pub(super) struct CustomWidget {
 
     /// The layout of the widget.
     pub layout: WidgetLayout,
-}
-
-impl CustomWidget {
-    /// Checks if the widget has a property with the given name.
-    pub fn has_property(&self, property_name: &str) -> bool {
-        self.default_properties.get(property_name).is_some()
-    }
 }
 
 /// A native widget definition.
@@ -77,13 +62,6 @@ pub struct NativeWidget {
     /// This function takes a mutable reference to `Commands` and the parent
     /// entity, and returns the spawned widget entity.
     pub spawn_func: fn(&Res<AssetServer>, &mut Commands, &NekoElement, Entity) -> Entity,
-}
-
-impl NativeWidget {
-    /// Checks if the widget has a property with the given name.
-    pub fn has_property(&self, property_name: &str) -> bool {
-        self.default_properties.get(property_name).is_some()
-    }
 }
 
 impl PartialEq<NativeWidget> for NativeWidget {
@@ -212,21 +190,7 @@ pub(super) fn parse_widget_layout(ctx: &mut ParseContext) -> NekoResult<WidgetLa
     while let Some(next) = ctx.peek() {
         match next.token_type {
             TokenType::Identifier => {
-                let name_position = ctx.next_position().unwrap_or_default();
                 let property = parse_unresolved_property(ctx)?;
-
-                if !ctx
-                    .get_widget(&widget)
-                    .expect("Widget should exist as checked earlier")
-                    .has_property(&property.name)
-                {
-                    return Err(NekoMaidParseError::InvalidProperty {
-                        property: property.name,
-                        widget: widget.clone(),
-                        position: name_position,
-                    });
-                }
-
                 layout.properties.insert(property.name, property.value);
             }
             TokenType::ClassKeyword => {
