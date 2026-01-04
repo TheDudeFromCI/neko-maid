@@ -156,6 +156,17 @@ pub enum NekoMaidParseError {
         position: TokenPosition,
     },
 
+    /// An error indicating that a slot was provided twice
+    /// in a layout.
+    #[error("Slot {slot} was provided twice at {position}.")]
+    InputSlotProvidedTwice {
+        /// The name of the slot provided twice.
+        slot: String,
+
+        /// The position of the slot definition in the source code.
+        position: TokenPosition,
+    },
+
     /// An error indicating that multiple output slots were defined in a single
     /// widget definition.
     #[error("A widget cannot have multiple output slots defined: {widget} at {position}")]

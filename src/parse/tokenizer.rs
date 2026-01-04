@@ -27,6 +27,7 @@ lazy_static! {
         (TokenType::DefKeyword,      Regex::new(r"^\s*(def)\b").unwrap()),
         (TokenType::ClassKeyword,    Regex::new(r"^\s*(class)\b").unwrap()),
         (TokenType::OutputKeyword,   Regex::new(r"^\s*(output)\b").unwrap()),
+        (TokenType::InKeyword,   Regex::new(r"^\s*(in)\b").unwrap()),
 
         // literals
         (TokenType::BooleanLiteral,  Regex::new(r"^\s*([Tt]rue|[Ff]alse)\b").unwrap()),

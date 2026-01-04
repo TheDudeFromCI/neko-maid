@@ -138,8 +138,9 @@ impl ParseContext {
     pub(super) fn into_module(self) -> NekoResult<Module> {
         let mut elements = self.imported_elements;
 
+        let variables = HashMap::new();
         for layout in self.layouts {
-            let element = build_element(&self.styles, &self.widgets, layout, None)?;
+            let element = build_element(&variables, &self.styles, &self.widgets, layout, None)?;
             elements.push(element);
         }
 

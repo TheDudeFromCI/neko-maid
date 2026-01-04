@@ -13,7 +13,7 @@ use crate::parse::property::UnresolvedPropertyValue;
 use crate::parse::style::Style;
 use crate::parse::token::TokenPosition;
 use crate::parse::value::PropertyValue;
-use crate::parse::widget::{NativeWidget, Widget, WidgetLayout};
+use crate::parse::widget::{NativeWidget, Widget};
 
 /// A temporary builder for NekoMaid UI elements for easier construction.
 #[derive(Debug, Clone, PartialEq)]
@@ -186,14 +186,15 @@ impl NekoElement {
 
 /// Builds a [`NekoElementBuilder`] from the given styles and layout.
 pub(super) fn build_element(
+    variables: &HashMap<String, UnresolvedPropertyValue>,
     styles: &[Style],
     widgets: &HashMap<String, Widget>,
-    mut layout: Layout,
+    layout: Layout,
     classpath: Option<ClassPath>,
 ) -> NekoResult<NekoElementBuilder> {
-    let Some(widget) = widgets.get(&layout.widget).cloned() else {
+    let Some(widget) = widgets.get(&layout.widget) else {
         return Err(NekoMaidParseError::UnknownWidget {
-            widget: layout.widget,
+            widget: layout.widget.clone(),
             position: TokenPosition::default(),
         });
     };
@@ -214,19 +215,22 @@ pub(super) fn build_element(
             };
 
             let mut children = Vec::new();
-            for child in layout.children {
-                children.push(build_element(
-                    styles,
-                    widgets,
-                    child,
-                    Some(classpath.clone()),
-                )?);
+            if let Some(c) = layout.children_slots.get("default") {
+                for child in c {
+                    children.push(build_element(
+                        &variables,
+                        styles,
+                        widgets,
+                        child.clone(),
+                        Some(classpath.clone()),
+                    )?);
+                }
             }
 
             let mut element = NekoElement {
                 classpath,
                 styles: Vec::new(),
-                variables: HashMap::new(),
+                variables: variables.clone(),
                 unresolved_properties: layout.properties,
                 properties: HashMap::new(),
                 default_properties: native_widget.default_properties.clone(),
@@ -239,127 +243,58 @@ pub(super) fn build_element(
             Ok(NekoElementBuilder {
                 element,
                 children,
-                native_widget,
-            })
-        }
-        Widget::Custom(custom_widget) => {
-            let mut local_variables = custom_widget.default_properties.clone();
-
-            for (name, value) in layout.properties {
-                local_variables.insert(name, value);
-            }
-
-            build_widget(
-                &local_variables,
-                styles,
-                widgets,
-                custom_widget.layout,
-                &mut layout.children,
-                classpath,
-            )
-        }
-    }
-}
-
-/// Builds a [`NekoElementBuilder`] from the given styles and custom widget
-/// layout.
-fn build_widget(
-    variables: &HashMap<String, UnresolvedPropertyValue>,
-    styles: &[Style],
-    widgets: &HashMap<String, Widget>,
-    layout: WidgetLayout,
-    original_children: &mut Vec<Layout>,
-    classpath: Option<ClassPath>,
-) -> NekoResult<NekoElementBuilder> {
-    let Some(widget) = widgets.get(&layout.widget).cloned() else {
-        return Err(NekoMaidParseError::UnknownWidget {
-            widget: layout.widget,
-            position: TokenPosition::default(),
-        });
-    };
-
-    match widget {
-        Widget::Native(native_widget) => {
-            let classes = ClassSet {
-                widget: layout.widget,
-                classes: layout.classes,
-            };
-
-            let classpath = match classpath {
-                Some(mut path) => {
-                    path.append(classes);
-                    path
-                }
-                None => ClassPath::new(classes),
-            };
-
-            let mut children = Vec::new();
-            for child in layout.children {
-                children.push(build_widget(
-                    &variables,
-                    styles,
-                    widgets,
-                    child,
-                    original_children,
-                    Some(classpath.clone()),
-                )?);
-            }
-
-            if layout.is_output {
-                for child in original_children.drain(..) {
-                    children.push(build_element(
-                        styles,
-                        widgets,
-                        child,
-                        Some(classpath.clone()),
-                    )?);
-                }
-            }
-
-            let mut element = NekoElement {
-                classpath,
-                styles: Vec::new(),
-                variables: variables.clone(),
-                unresolved_properties: HashMap::new(),
-                properties: HashMap::new(),
-                default_properties: native_widget.default_properties.clone(),
-            };
-
-            for style in styles {
-                element.try_add_style(style);
-            }
-
-            for (name, value) in layout.properties {
-                element
-                    .unresolved_properties
-                    .insert(name.clone(), value.clone());
-            }
-
-            Ok(NekoElementBuilder {
-                element,
-                children,
-                native_widget,
+                native_widget: native_widget.clone(),
             })
         }
         Widget::Custom(custom_widget) => {
             let mut local_variables = variables.clone();
 
-            for (name, value) in custom_widget.default_properties {
-                local_variables.insert(name, value);
+            for (name, value) in &custom_widget.default_properties {
+                local_variables.insert(name.clone(), value.clone());
             }
 
-            for (name, value) in layout.properties {
-                local_variables.insert(name, value);
+            for (name, value) in &layout.properties {
+                local_variables.insert(name.clone(), value.clone());
             }
 
-            build_widget(
-                &local_variables,
-                styles,
-                widgets,
-                custom_widget.layout,
-                original_children,
-                classpath,
-            )
+            let mut widget_layout = custom_widget.layout.clone();
+            substitute_widget_slots(&mut widget_layout, layout.children_slots);
+
+            build_element(&local_variables, styles, widgets, widget_layout, classpath)
         }
     }
+}
+
+/// Insert the given nodes into the slots of this layout hierarchy.
+pub(super) fn substitute_widget_slots(
+    layout: &mut Layout,
+    mut slots: HashMap<String, Vec<Layout>>,
+) -> HashMap<String, Vec<Layout>> {
+    // the slot list is sorted in ascending order by index position.
+    // it's important to substitute the slots in the end first to
+    // not mess up the indices when inserting elements to the children vector.
+    //
+    // by popping the slot from this layout we guarantee that it's not mistakenly
+    // used twice.
+    while let Some(slot) = layout.slots.pop() {
+        let layout_children = layout.get_slot_mut(slot.location);
+
+        if let Some(mut children) = slots.remove(&slot.name) {
+            // we should insert in reverse order since we always
+            // insert at the beginning
+            children.reverse();
+            for mut c in children {
+                // guarantee that the slot content does not have any remaining slots
+                c.slots.clear();
+                layout_children.insert(slot.index, c);
+            }
+        }
+    }
+
+    for children in layout.children_slots.values_mut() {
+        for c in children {
+            slots = substitute_widget_slots(c, slots);
+        }
+    }
+    slots
 }
