@@ -7,7 +7,7 @@ use crate::parse::NekoMaidParseError;
 use crate::parse::class::parse_class;
 use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::property::{UnresolvedPropertyValue, parse_unresolved_property};
-use crate::parse::token::TokenType;
+use crate::parse::token::{TokenType, TokenValue};
 
 /// A slot in a layout.
 #[derive(Clone, Debug, PartialEq)]
@@ -150,12 +150,12 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
 }
 
 /// Parses a slot statement.
-pub fn parse_slot(ctx: &mut ParseContext) -> NekoResult<String> {
+pub(super) fn parse_slot(ctx: &mut ParseContext) -> NekoResult<String> {
     ctx.expect(TokenType::OutputKeyword)?;
 
     let name = ctx
         .maybe_consume(TokenType::Identifier)
-        .and_then(|t| t.as_string())
+        .and_then(|t| match t { TokenValue::String(s) => Some(s), _ => None })
         .unwrap_or("default".to_string());
 
     ctx.expect(TokenType::Semicolon)?;
@@ -164,7 +164,7 @@ pub fn parse_slot(ctx: &mut ParseContext) -> NekoResult<String> {
 }
 
 /// A parsed in statement.
-pub struct InStatement {
+pub(super) struct InStatement {
     /// The input slot this statement refers to.
     pub slot_name: String,
     /// The children nodes contained by the slot.
@@ -174,7 +174,7 @@ pub struct InStatement {
 }
 
 /// Parses an `in` statement.
-pub fn parse_in(ctx: &mut ParseContext) -> NekoResult<InStatement> {
+pub(super) fn parse_in(ctx: &mut ParseContext) -> NekoResult<InStatement> {
     ctx.expect(TokenType::InKeyword)?;
 
     let slot_name = ctx.expect_as_string(TokenType::Identifier)?;

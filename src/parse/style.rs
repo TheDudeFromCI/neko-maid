@@ -23,7 +23,7 @@ pub struct Style {
 
 impl Style {
     /// Creates a new Style with the given selector and properties.
-    pub fn new(
+    pub(super) fn new(
         selector: Selector,
         unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
     ) -> Self {

@@ -129,11 +129,6 @@ impl ParseContext {
         self.variables.insert(name, value);
     }
 
-    /// Gets the value of a defined variable by its name.
-    pub(super) fn get_variable(&self, name: &str) -> Option<&UnresolvedPropertyValue> {
-        self.variables.get(name)
-    }
-
     /// Converts this parse context into a [`Module`].
     pub(super) fn into_module(self) -> NekoResult<Module> {
         let mut elements = self.imported_elements;
