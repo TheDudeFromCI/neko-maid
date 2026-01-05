@@ -11,18 +11,18 @@ use crate::parse::value::PropertyValue;
 
 /// Represents a layout in the UI.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct Layout {
+pub(crate) struct Layout {
     /// The widget type.
-    pub(super) widget: String,
+    pub widget: String,
 
     /// The properties of the layout.
-    pub(super) properties: HashMap<String, PropertyValue>,
+    pub properties: HashMap<String, PropertyValue>,
 
     /// The child layouts.
-    pub(super) children: Vec<Layout>,
+    pub children: Vec<Layout>,
 
     /// The classes applied to this layout.
-    pub(super) classes: HashSet<String>,
+    pub classes: HashSet<String>,
 }
 
 /// Parses a layout from the input and returns a [`Layout`].

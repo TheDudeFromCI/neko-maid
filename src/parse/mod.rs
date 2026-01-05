@@ -21,6 +21,9 @@ pub mod tokenizer;
 pub mod value;
 pub mod widget;
 
+#[cfg(test)]
+mod tests;
+
 /// A parser for NekoMaid UI files.
 pub struct NekoMaidParser {
     /// The parsing context.

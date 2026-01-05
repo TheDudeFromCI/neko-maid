@@ -16,7 +16,7 @@ use crate::parse::value::PropertyValue;
 use crate::parse::widget::Widget;
 
 /// Context for parsing NekoMaid UI files.
-pub(super) struct ParseContext {
+pub(crate) struct ParseContext {
     /// A map of defined variables and their values.
     variables: HashMap<String, PropertyValue>,
 
@@ -44,7 +44,7 @@ impl ParseContext {
     ///
     /// A file retriever function can be provided to enable importing of
     /// external NekoMaid UI modules.
-    pub(super) fn new(tokens: Vec<Token>) -> Self {
+    pub(crate) fn new(tokens: Vec<Token>) -> Self {
         Self {
             variables: HashMap::new(),
             styles: Vec::new(),
@@ -57,18 +57,18 @@ impl ParseContext {
     }
 
     /// Peeks at the next token without advancing the index.
-    pub(super) fn peek(&mut self) -> Option<&Token> {
+    pub(crate) fn peek(&mut self) -> Option<&Token> {
         self.tokens.peek()
     }
 
     /// Advances to the next token and returns it.
-    pub(super) fn consume(&mut self) -> Result<Token, NekoMaidParseError> {
+    pub(crate) fn consume(&mut self) -> Result<Token, NekoMaidParseError> {
         self.tokens.next().ok_or(NekoMaidParseError::EndOfStream)
     }
 
     /// Checks if the next token matches the given type and advances if it does,
     /// returning the token's value.
-    pub(super) fn maybe_consume(&mut self, test: TokenType) -> Option<TokenValue> {
+    pub(crate) fn maybe_consume(&mut self, test: TokenType) -> Option<TokenValue> {
         let next = self.tokens.peek()?;
         if next.token_type == test {
             Some(self.tokens.next().unwrap().value)
@@ -80,7 +80,7 @@ impl ParseContext {
     /// Expects the next token to be of the given type, advancing the index and
     /// returning the token's value. Returns an error if the next token does not
     /// match the expected type.
-    pub(super) fn expect(&mut self, expected: TokenType) -> Result<TokenValue, NekoMaidParseError> {
+    pub(crate) fn expect(&mut self, expected: TokenType) -> Result<TokenValue, NekoMaidParseError> {
         let next = self.consume()?;
 
         if next.token_type == expected {
@@ -98,7 +98,7 @@ impl ParseContext {
     /// returning the token's value as a string. Returns an error if the next
     /// token does not match the expected type or cannot be converted to a
     /// string.
-    pub(super) fn expect_as_string(
+    pub(crate) fn expect_as_string(
         &mut self,
         expected: TokenType,
     ) -> Result<String, NekoMaidParseError> {
@@ -125,17 +125,17 @@ impl ParseContext {
 
     /// Sets the value of a defined variable. If the variable already exists,
     /// its value is updated.
-    pub(super) fn set_variable(&mut self, name: String, value: PropertyValue) {
+    pub(crate) fn set_variable(&mut self, name: String, value: PropertyValue) {
         self.variables.insert(name, value);
     }
 
     /// Gets the value of a defined variable by its name.
-    pub(super) fn get_variable(&self, name: &str) -> Option<&PropertyValue> {
+    pub(crate) fn get_variable(&self, name: &str) -> Option<&PropertyValue> {
         self.variables.get(name)
     }
 
     /// Converts this parse context into a [`Module`].
-    pub(super) fn into_module(self) -> NekoResult<Module> {
+    pub(crate) fn into_module(self) -> NekoResult<Module> {
         let mut elements = self.imported_elements;
 
         for layout in self.layouts {
@@ -154,17 +154,17 @@ impl ParseContext {
 
     /// Gets the next token position in the token stream, or `None` if there are
     /// no more tokens.
-    pub(super) fn next_position(&mut self) -> Option<TokenPosition> {
+    pub(crate) fn next_position(&mut self) -> Option<TokenPosition> {
         self.peek().map(|t| t.position)
     }
 
     /// Adds a widget definition to the list of available widgets.
-    pub(super) fn add_widget(&mut self, widget: Widget) {
+    pub(crate) fn add_widget(&mut self, widget: Widget) {
         self.widgets.insert(widget.name().to_string(), widget);
     }
 
     /// Gets the widget definition for the given widget name, if it exists.
-    pub(super) fn get_widget(&self, widget: &str) -> Option<&Widget> {
+    pub(crate) fn get_widget(&self, widget: &str) -> Option<&Widget> {
         self.widgets.get(widget)
     }
 
@@ -172,7 +172,7 @@ impl ParseContext {
     /// selectors, they will be merged together. In the case of property
     /// conflicts, the properties of the later-added style will take
     /// precedence.
-    pub(super) fn add_style(&mut self, style: Style) {
+    pub(crate) fn add_style(&mut self, style: Style) {
         for existing_style in &mut self.styles {
             if existing_style.selector() == style.selector() {
                 existing_style.merge(style);
@@ -184,7 +184,7 @@ impl ParseContext {
     }
 
     /// Adds a layout to the list of elements.
-    pub(super) fn add_layout(&mut self, layout: Layout) {
+    pub(crate) fn add_layout(&mut self, layout: Layout) {
         self.layouts.push(layout);
     }
 
@@ -193,7 +193,7 @@ impl ParseContext {
     ///
     /// Importing a module will destroy temporary metadata associated with it,
     /// and prevent it from being imported again.
-    pub(super) fn import_module(
+    pub(crate) fn import_module(
         &mut self,
         name: &str,
         pos: TokenPosition,
@@ -226,7 +226,7 @@ impl ParseContext {
     ///
     /// This does not import the module; it simply makes it available for import
     /// within this context if requested.
-    pub(super) fn add_module(&mut self, name: String, module: Module) {
+    pub(crate) fn add_module(&mut self, name: String, module: Module) {
         self.modules.insert(name, module);
     }
 }

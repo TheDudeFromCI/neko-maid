@@ -12,10 +12,10 @@ use crate::parse::value::PropertyValue;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Style {
     /// The selector for the style.
-    selector: Selector,
+    pub(crate) selector: Selector,
 
     /// The properties defined in the style.
-    properties: HashMap<String, PropertyValue>,
+    pub(crate) properties: HashMap<String, PropertyValue>,
 }
 
 impl Style {

@@ -25,7 +25,7 @@ pub struct Module {
     pub(crate) styles: Vec<Style>,
 
     /// A map of available widgets. (Both native and user-defined)
-    pub(super) widgets: HashMap<String, Widget>,
+    pub(crate) widgets: HashMap<String, Widget>,
 
     /// A list of elements defined in this module, ready to be instantiated.
     pub(crate) elements: Vec<NekoElementBuilder>,

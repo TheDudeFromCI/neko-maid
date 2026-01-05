@@ -17,7 +17,7 @@ use crate::parse::value::PropertyValue;
 
 /// A NekoMaid UI widget definition.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) enum Widget {
+pub(crate) enum Widget {
     /// A custom widget defined in NekoMaid UI.
     Custom(CustomWidget),
 
@@ -37,7 +37,7 @@ impl Widget {
 
 /// A custom widget definition.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct CustomWidget {
+pub(crate) struct CustomWidget {
     /// The name of the widget.
     pub name: String,
 
@@ -72,7 +72,7 @@ impl PartialEq<NativeWidget> for NativeWidget {
 
 /// Represents a layout for a widget definition in the UI.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct WidgetLayout {
+pub(crate) struct WidgetLayout {
     /// The widget type.
     pub widget: String,
 

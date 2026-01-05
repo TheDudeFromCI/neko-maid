@@ -22,17 +22,17 @@ pub(super) struct Property {
 
 /// A property within a style or element.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct UnresolvedProperty {
+pub(crate) struct UnresolvedProperty {
     /// The name of the property.
-    pub(super) name: String,
+    pub name: String,
 
     /// The value of the property.
-    pub(super) value: UnresolvedPropertyValue,
+    pub value: UnresolvedPropertyValue,
 }
 
 /// An unresolved property value that may be a constant or a variable reference.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) enum UnresolvedPropertyValue {
+pub(crate) enum UnresolvedPropertyValue {
     /// A constant property value.
     Constant(PropertyValue),
 
