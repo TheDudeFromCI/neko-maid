@@ -361,6 +361,24 @@ pub struct TokenPosition {
     pub length: usize,
 }
 
+impl TokenPosition {
+    /// A constant representing an unknown token position.
+    pub const UNKNOWN: TokenPosition = TokenPosition {
+        line: 0,
+        column: 0,
+        length: 0,
+    };
+
+    /// Creates a new [`TokenPosition`].
+    pub fn new(line: usize, column: usize, length: usize) -> Self {
+        TokenPosition {
+            line,
+            column,
+            length,
+        }
+    }
+}
+
 impl Default for TokenPosition {
     fn default() -> Self {
         TokenPosition {
@@ -373,12 +391,16 @@ impl Default for TokenPosition {
 
 impl fmt::Display for TokenPosition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "line {}, col {}-{}",
-            self.line,
-            self.column,
-            self.column + self.length - 1
-        )
+        if self.line == 0 && self.column == 0 {
+            write!(f, "unknown position")
+        } else {
+            write!(
+                f,
+                "line {}, col {}-{}",
+                self.line,
+                self.column,
+                self.column + self.length - 1
+            )
+        }
     }
 }

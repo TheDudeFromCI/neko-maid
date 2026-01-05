@@ -4,9 +4,11 @@ use bevy::platform::collections::{HashMap, HashSet};
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::context::{NekoResult, ParseContext};
+use crate::parse::layout::Layout;
 use crate::parse::property::{UnresolvedPropertyValue, parse_unresolved_property};
 use crate::parse::token::TokenType;
 use crate::parse::value::PropertyValue;
+use crate::parse::widget::Widget;
 
 /// A NekoMaid UI style definition.
 #[derive(Debug, Clone, PartialEq)]
@@ -15,7 +17,7 @@ pub struct Style {
     pub(crate) selector: Selector,
 
     /// The unresolved properties defined in the style.
-    unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
+    pub(crate) unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
 
     /// The properties defined in the style.
     pub(crate) properties: HashMap<String, PropertyValue>,
@@ -23,7 +25,7 @@ pub struct Style {
 
 impl Style {
     /// Creates a new Style with the given selector and properties.
-    pub(super) fn new(
+    pub(crate) fn new(
         selector: Selector,
         unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
     ) -> Self {
@@ -98,8 +100,35 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
     ctx.maybe_consume(TokenType::StyleKeyword);
     ctx.maybe_consume(TokenType::WithKeyword);
 
-    let selector_part = parse_style_selector(ctx)?;
-    selector.hierarchy.push(selector_part);
+    let widget_position = ctx.next_position().unwrap_or_default();
+    let widget = ctx.expect_as_string(TokenType::Identifier)?;
+
+    let (whitelist, blacklist) = parse_style_selector(ctx)?;
+
+    let Some(w) = ctx.get_widget(&widget) else {
+        return Err(NekoMaidParseError::UnknownWidget {
+            widget,
+            position: widget_position,
+        });
+    };
+
+    if let Widget::Custom(custom_widget) = w {
+        let selector_index = selector.hierarchy.len();
+        unroll_widget(&custom_widget.layout, "default", &mut selector);
+
+        selector.hierarchy[selector_index]
+            .whitelist
+            .extend(whitelist);
+        selector.hierarchy[selector_index]
+            .blacklist
+            .extend(blacklist);
+    } else {
+        selector.hierarchy.push(SelectorPart {
+            widget,
+            whitelist,
+            blacklist,
+        });
+    }
 
     ctx.expect(TokenType::OpenBrace)?;
 
@@ -131,23 +160,17 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
 
     ctx.expect(TokenType::CloseBrace)?;
 
-    ctx.add_style(Style::new(selector, properties));
+    if !properties.is_empty() {
+        ctx.add_style(Style::new(selector, properties));
+    }
 
     Ok(())
 }
 
 /// Parses a style selector part from the input and returns a [`SelectorPart`].
-pub(super) fn parse_style_selector(ctx: &mut ParseContext) -> NekoResult<SelectorPart> {
-    let widget_position = ctx.next_position().unwrap_or_default();
-    let widget = ctx.expect_as_string(TokenType::Identifier)?;
-
-    if ctx.get_widget(&widget).is_none() {
-        return Err(NekoMaidParseError::UnknownWidget {
-            widget,
-            position: widget_position,
-        });
-    }
-
+pub(super) fn parse_style_selector(
+    ctx: &mut ParseContext,
+) -> NekoResult<(HashSet<String>, HashSet<String>)> {
     let mut whitelist = HashSet::new();
     let mut blacklist = HashSet::new();
 
@@ -180,9 +203,18 @@ pub(super) fn parse_style_selector(ctx: &mut ParseContext) -> NekoResult<Selecto
         }
     }
 
-    Ok(SelectorPart {
-        widget,
-        whitelist,
-        blacklist,
-    })
+    Ok((whitelist, blacklist))
+}
+
+/// Unrolls a custom widget's layout into selector parts.
+fn unroll_widget(layout: &Layout, slot: &str, selector: &mut Selector) {
+    selector.hierarchy.push(SelectorPart {
+        widget: layout.widget.clone(),
+        whitelist: layout.classes.clone(),
+        blacklist: HashSet::new(),
+    });
+
+    for child in layout.get_slot(slot) {
+        unroll_widget(child, "default", selector);
+    }
 }

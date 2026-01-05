@@ -41,10 +41,11 @@ use crate::parse::element::NekoElement;
 /// pub struct MyMarker;
 /// ```
 pub trait NekoMarker: 'static {
-    ///
+    /// Create a new instance of the marker
     fn new() -> Self
     where
         Self: Sized;
+
     /// Return the marker id
     fn id() -> &'static str
     where
@@ -60,6 +61,7 @@ pub struct MarkerRegistry {
     /// Maps marker names to marker factories.
     factories: HashMap<String, MarkerFactory>,
 }
+
 impl MarkerRegistry {
     /// Inserts the marker component to an entity given its element.
     pub fn insert(&self, mut entity: EntityCommands, element: &NekoElement) {
@@ -78,7 +80,7 @@ impl MarkerRegistry {
 /// app.add_marker::<MyMarker>();
 /// ```
 pub trait MarkerAppExt {
-    ///
+    /// Registers a marker type.
     fn add_marker<T: NekoMarker + Bundle>(&mut self) -> &mut Self;
 }
 

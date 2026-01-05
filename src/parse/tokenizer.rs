@@ -34,7 +34,7 @@ lazy_static! {
         (TokenType::ColorLiteral,    Regex::new(r"^\s*#([a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{4}|[a-fA-F0-9]{3})\b").unwrap()),
         (TokenType::PercentLiteral,  Regex::new(r"^\s*(-?\d+\.?\d*|-?\d*\.\d+)%").unwrap()),
         (TokenType::PixelsLiteral,   Regex::new(r"^\s*(-?\d+\.?\d*|-?\d*\.\d+)px\b").unwrap()),
-        (TokenType::NumberLiteral,   Regex::new(r"^\s*(-?\d+\.?\d*|-?\d*\.\d+)\b").unwrap()),
+        (TokenType::NumberLiteral,   Regex::new(r"^\s*(-?\d+\.?\d*|-?\d*\.\d+)").unwrap()),
         (TokenType::StringLiteral,   Regex::new(r#"^\s*"(.*)""#).unwrap()),
         (TokenType::StringLiteral,   Regex::new(r#"^\s*'(.*)'"#).unwrap()),
         (TokenType::StringLiteral,   Regex::new(r#"^\s*`(.*)`"#).unwrap()),
@@ -128,6 +128,7 @@ fn try_token(
     token_type: TokenType,
 ) -> Option<Token> {
     if let Some((start, end, full_end)) = try_regex(regex, code, position.index) {
+        update_position(code, position, start);
         let mut token = Token {
             token_type,
             position: TokenPosition {
@@ -205,6 +206,8 @@ fn try_regex(re: &Regex, code: &str, offset: usize) -> Option<(usize, usize, usi
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[test]
@@ -219,44 +222,16 @@ but not here";
         let regex = Regex::new(r"^\s*([a-z]+)").unwrap();
 
         let token = try_token(code, &mut pos, &regex, TokenType::Identifier).unwrap();
-        assert_eq!(
-            token.position,
-            TokenPosition {
-                line: 2,
-                column: 0,
-                length: 2,
-            }
-        );
+        assert_eq!(token.position, TokenPosition::new(2, 1, 2));
 
         let token = try_token(code, &mut pos, &regex, TokenType::Identifier).unwrap();
-        assert_eq!(
-            token.position,
-            TokenPosition {
-                line: 2,
-                column: 4,
-                length: 4,
-            }
-        );
+        assert_eq!(token.position, TokenPosition::new(2, 4, 4));
 
         let token = try_token(code, &mut pos, &regex, TokenType::Identifier).unwrap();
-        assert_eq!(
-            token.position,
-            TokenPosition {
-                line: 3,
-                column: 2,
-                length: 2,
-            }
-        );
+        assert_eq!(token.position, TokenPosition::new(3, 3, 2));
 
         let token = try_token(code, &mut pos, &regex, TokenType::Identifier).unwrap();
-        assert_eq!(
-            token.position,
-            TokenPosition {
-                line: 3,
-                column: 5,
-                length: 4,
-            }
-        );
+        assert_eq!(token.position, TokenPosition::new(3, 6, 4));
     }
 
     #[test]
@@ -304,31 +279,31 @@ but not here";
 
     #[test]
     fn tokenizer_numbers() {
-        let code = "123 45.67 0.001 1000 .5 1. -3 -.2";
+        const NUMBERS: &[f64] = &[123.0, 45.67, 0.001, 1000.0, 0.5, 1.0, -3.0, -0.2];
+
+        let code = "
+        123 45.67 0.001 1000 .5 1. -3 -.2
+        123% 45.67% 0.001% 1000% .5% 1.% -3% -.2%
+        123px 45.67px 0.001px 1000px .5px 1.px -3px -.2px
+        ";
         let tokens = Tokenizer::tokenize(code).unwrap();
 
-        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens.len(), 24);
 
-        assert_eq!(tokens[0].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[0].value, 123.0.into());
+        for (i, n) in NUMBERS.iter().enumerate() {
+            assert_eq!(tokens[i].token_type, TokenType::NumberLiteral);
+            assert_eq!(tokens[i].value, (*n).into());
+        }
 
-        assert_eq!(tokens[1].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[1].value, 45.67.into());
+        for (i, n) in NUMBERS.iter().enumerate() {
+            assert_eq!(tokens[i + 8].token_type, TokenType::PercentLiteral);
+            assert_eq!(tokens[i + 8].value, (*n).into());
+        }
 
-        assert_eq!(tokens[2].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[2].value, 0.001.into());
-
-        assert_eq!(tokens[3].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[3].value, 1000.0.into());
-
-        assert_eq!(tokens[4].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[4].value, 0.5.into());
-
-        assert_eq!(tokens[5].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[5].value, 1.0.into());
-
-        assert_eq!(tokens[6].token_type, TokenType::NumberLiteral);
-        assert_eq!(tokens[6].value, (-3.0).into());
+        for (i, n) in NUMBERS.iter().enumerate() {
+            assert_eq!(tokens[i + 16].token_type, TokenType::PixelsLiteral);
+            assert_eq!(tokens[i + 16].value, (*n).into());
+        }
     }
 
     #[test]

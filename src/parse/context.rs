@@ -38,7 +38,7 @@ pub(crate) struct ParseContext {
     /// A list of elements imported from other modules.
     imported_elements: Vec<NekoElementBuilder>,
 
-    // the name of the widget currently being parsed.
+    /// the name of the widget currently being parsed.
     current_widget: Option<String>,
 }
 
@@ -131,11 +131,6 @@ impl ParseContext {
     /// its value is updated.
     pub(crate) fn set_variable(&mut self, name: String, value: UnresolvedPropertyValue) {
         self.variables.insert(name, value);
-    }
-
-    /// Gets the value of a defined variable by its name.
-    pub(crate) fn get_variable(&self, name: &str) -> Option<&UnresolvedPropertyValue> {
-        self.variables.get(name)
     }
 
     /// Converts this parse context into a [`Module`].

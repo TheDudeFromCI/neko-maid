@@ -195,7 +195,7 @@ pub(super) fn build_element(
     let Some(widget) = widgets.get(&layout.widget) else {
         return Err(NekoMaidParseError::UnknownWidget {
             widget: layout.widget.clone(),
-            position: TokenPosition::default(),
+            position: TokenPosition::UNKNOWN,
         });
     };
 
@@ -218,7 +218,7 @@ pub(super) fn build_element(
             if let Some(c) = layout.children_slots.get("default") {
                 for child in c {
                     children.push(build_element(
-                        &variables,
+                        variables,
                         styles,
                         widgets,
                         child.clone(),
