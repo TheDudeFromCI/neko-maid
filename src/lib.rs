@@ -5,9 +5,11 @@
 use bevy::prelude::*;
 
 use crate::asset::{NekoMaidAssetLoader, NekoMaidUI};
+use crate::marker::MarkerRegistry;
 
 pub mod asset;
 pub mod components;
+pub mod marker;
 pub mod native;
 pub mod parse;
 mod systems;
@@ -21,6 +23,7 @@ impl Plugin for NekoMaidPlugin {
     fn build(&self, app_: &mut App) {
         app_.init_asset::<NekoMaidUI>()
             .init_asset_loader::<NekoMaidAssetLoader>()
+            .init_resource::<MarkerRegistry>()
             .add_systems(
                 Update,
                 (

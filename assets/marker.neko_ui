@@ -1,8 +1,3 @@
-// global variables that are controlled dynamically.
-var width = 400;
-var color = #000000;
-
-var text-color = #614a31;
 
 style div +outer-menu {
   background-color: #D5A96E;
@@ -20,13 +15,15 @@ style div +inner-menu {
 
 style p +h1 {
   font-size: 32;
-  color: $color;
+  color: #000000;
 }
 
 def h1 {
   var text = "Text";
 
   layout div {
+    class test;
+    
     flex-direction: column;
 
     with p {
@@ -52,7 +49,7 @@ layout div {
   flex-direction: column;
   align-items: center;
 
-  width: $width;
+  width: 500px;
   height: 600px;
 
   margin: auto;
@@ -70,5 +67,17 @@ layout div {
     flex-grow: 1;
 
     padding: 8px;
+
+    with p {
+      text: "Hiii";
+      color: #000000;
+    }
+
+    with div {
+      class test;
+      
+      width: 100px;
+      height: 100px;
+    }
   }
 }

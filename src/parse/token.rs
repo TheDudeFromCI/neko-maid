@@ -237,8 +237,11 @@ pub(crate) enum TokenType {
     /// The `class` keyword.
     ClassKeyword,
 
-    /// The `children` keyword.
+    /// The `output` keyword.
     OutputKeyword,
+
+    /// The `in` keyword.
+    InKeyword,
 
     // === Literals ===
     /// A boolean literal.
@@ -292,7 +295,8 @@ impl TokenType {
             TokenType::WithKeyword => "with",
             TokenType::DefKeyword => "def",
             TokenType::ClassKeyword => "class",
-            TokenType::OutputKeyword => "children",
+            TokenType::OutputKeyword => "output",
+            TokenType::InKeyword => "in",
             TokenType::BooleanLiteral => "boolean",
             TokenType::ColorLiteral => "color",
             TokenType::NumberLiteral => "number",

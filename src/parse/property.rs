@@ -12,17 +12,7 @@ use crate::parse::value::PropertyValue;
 
 /// A property within a style or element.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct Property {
-    /// The name of the property.
-    pub(super) name: String,
-
-    /// The value of the property.
-    pub(super) value: PropertyValue,
-}
-
-/// A property within a style or element.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct UnresolvedProperty {
+pub(super) struct UnresolvedProperty {
     /// The name of the property.
     pub name: String,
 
@@ -42,10 +32,7 @@ pub(crate) enum UnresolvedPropertyValue {
 
 impl UnresolvedPropertyValue {
     /// Resolves the property value using the provided variable map.
-    pub(super) fn resolve(
-        &self,
-        variables: &HashMap<String, PropertyValue>,
-    ) -> NekoResult<PropertyValue> {
+    pub fn resolve(&self, variables: &HashMap<String, PropertyValue>) -> NekoResult<PropertyValue> {
         match self {
             UnresolvedPropertyValue::Constant(v) => Ok(v.clone()),
             UnresolvedPropertyValue::Variable(var_name) => {
@@ -98,16 +85,6 @@ impl fmt::Display for PropertyType {
     }
 }
 
-/// Parses a property from the input and returns a [`Property`].
-pub(super) fn parse_property(ctx: &mut ParseContext) -> NekoResult<Property> {
-    let name = ctx.expect_as_string(TokenType::Identifier)?;
-    ctx.expect(TokenType::Colon)?;
-    let value = parse_value(ctx)?;
-    ctx.expect(TokenType::Semicolon)?;
-
-    Ok(Property { name, value })
-}
-
 /// Parses an unresolved property from the input and returns a
 /// [`UnresolvedProperty`].
 pub(super) fn parse_unresolved_property(ctx: &mut ParseContext) -> NekoResult<UnresolvedProperty> {
@@ -120,14 +97,14 @@ pub(super) fn parse_unresolved_property(ctx: &mut ParseContext) -> NekoResult<Un
 }
 
 /// Parses a variable declaration from the input and returns a [`Property`].
-pub(super) fn parse_variable(ctx: &mut ParseContext) -> NekoResult<Property> {
+pub(super) fn parse_variable(ctx: &mut ParseContext) -> NekoResult<UnresolvedProperty> {
     ctx.expect(TokenType::VarKeyword)?;
     let name = ctx.expect_as_string(TokenType::Identifier)?;
     ctx.expect(TokenType::Equals)?;
-    let value = parse_value(ctx)?;
+    let value = parse_unresolved_value(ctx)?;
     ctx.expect(TokenType::Semicolon)?;
 
-    Ok(Property { name, value })
+    Ok(UnresolvedProperty { name, value })
 }
 
 /// Parses an unresolved property value from the input and returns a
@@ -175,21 +152,5 @@ pub(super) fn parse_unresolved_value(
             found: format!("{}", next.token_type),
             position: next.position,
         }),
-    }
-}
-
-/// Parses a property value from the input and returns a [`PropertyValue`].
-pub(super) fn parse_value(ctx: &mut ParseContext) -> NekoResult<PropertyValue> {
-    let next_pos = ctx.next_position().unwrap_or_default();
-    let value = parse_unresolved_value(ctx)?;
-    match value {
-        UnresolvedPropertyValue::Constant(v) => Ok(v),
-        UnresolvedPropertyValue::Variable(var_name) => match ctx.get_variable(&var_name) {
-            Some(v) => Ok(v.clone()),
-            None => Err(NekoMaidParseError::VariableNotFound {
-                variable: var_name,
-                position: next_pos,
-            }),
-        },
     }
 }

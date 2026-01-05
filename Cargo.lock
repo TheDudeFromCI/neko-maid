@@ -3127,9 +3127,19 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "lazy_static",
+ "neko_derive",
  "pretty_assertions",
  "regex",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "neko_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
