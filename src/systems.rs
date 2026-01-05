@@ -96,7 +96,7 @@ fn spawn_element(
 ) {
     let entity =
         (element.native_widget.spawn_func)(asset_server, commands, &element.element, parent);
-    
+
     markers.insert(commands.entity(entity), &element.element);
 
     for child in &element.children {

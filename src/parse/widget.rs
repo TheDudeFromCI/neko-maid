@@ -5,14 +5,14 @@ use std::sync::Arc;
 use bevy::asset::AssetServer;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::system::{Commands, Res};
-use bevy::platform::collections::HashMap;
+use bevy::platform::collections::{HashMap, HashSet};
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::element::NekoElement;
 use crate::parse::layout::{Layout, parse_layout};
 use crate::parse::property::{UnresolvedPropertyValue, parse_variable};
-use crate::parse::token::TokenType;
+use crate::parse::token::{TokenPosition, TokenType};
 use crate::parse::value::PropertyValue;
 
 /// A NekoMaid UI widget definition.
@@ -76,6 +76,7 @@ pub(super) fn parse_widget(ctx: &mut ParseContext) -> NekoResult<Widget> {
 
     let widget_position = ctx.next_position().unwrap_or_default();
     let name = ctx.expect_as_string(TokenType::Identifier)?;
+    ctx.set_current_widget(Some(name.clone()));
 
     ctx.expect(TokenType::OpenBrace)?;
 
@@ -122,9 +123,59 @@ pub(super) fn parse_widget(ctx: &mut ParseContext) -> NekoResult<Widget> {
         });
     };
 
+    validate_layout_slots(&layout, &name, &widget_position)?;
+
+    ctx.set_current_widget(None);
+
     Ok(Widget::Custom(CustomWidget {
         name,
         default_properties: properties,
         layout,
     }))
+}
+
+/// Validates if layout does not contain duplicated slots and
+/// contains at least one slot.
+pub(super) fn validate_layout_slots(
+    layout: &Layout,
+    widget: &String,
+    position: &TokenPosition,
+) -> NekoResult<()> {
+    fn f(
+        l: &Layout,
+        slots: &mut HashSet<String>,
+        widget: &String,
+        position: &TokenPosition,
+    ) -> NekoResult<()> {
+        for s in &l.slots {
+            if slots.contains(&s.name) {
+                return Err(NekoMaidParseError::LayoutWithDuplicatedOutputs {
+                    widget: widget.clone(),
+                    name: s.name.clone(),
+                    position: position.clone(),
+                });
+            }
+            slots.insert(s.name.clone());
+        }
+
+        for children in l.children_slots.values() {
+            for c in children {
+                f(c, slots, widget, position)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    let mut slots = HashSet::new();
+    f(layout, &mut slots, widget, position)?;
+
+    if slots.is_empty() {
+        return Err(NekoMaidParseError::LayoutHasNoOutput {
+            widget: widget.clone(),
+            position: position.clone(),
+        });
+    }
+
+    Ok(())
 }

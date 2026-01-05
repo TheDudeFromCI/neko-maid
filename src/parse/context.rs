@@ -37,6 +37,9 @@ pub(super) struct ParseContext {
 
     /// A list of elements imported from other modules.
     imported_elements: Vec<NekoElementBuilder>,
+
+    // the name of the widget currently being parsed.
+    current_widget: Option<String>,
 }
 
 impl ParseContext {
@@ -53,6 +56,7 @@ impl ParseContext {
             modules: HashMap::new(),
             tokens: tokens.into_iter().peekable(),
             imported_elements: Vec::new(),
+            current_widget: None,
         }
     }
 
@@ -68,10 +72,10 @@ impl ParseContext {
 
     /// Checks if the next token matches the given type and advances if it does,
     /// returning the token's value.
-    pub(super) fn maybe_consume(&mut self, test: TokenType) -> Option<TokenValue> {
+    pub(super) fn maybe_consume(&mut self, test: TokenType) -> Option<Token> {
         let next = self.tokens.peek()?;
         if next.token_type == test {
-            Some(self.tokens.next().unwrap().value)
+            Some(self.tokens.next().unwrap())
         } else {
             None
         }
@@ -80,11 +84,11 @@ impl ParseContext {
     /// Expects the next token to be of the given type, advancing the index and
     /// returning the token's value. Returns an error if the next token does not
     /// match the expected type.
-    pub(super) fn expect(&mut self, expected: TokenType) -> Result<TokenValue, NekoMaidParseError> {
+    pub(super) fn expect(&mut self, expected: TokenType) -> Result<Token, NekoMaidParseError> {
         let next = self.consume()?;
 
         if next.token_type == expected {
-            Ok(next.value)
+            Ok(next)
         } else {
             Err(NekoMaidParseError::UnexpectedToken {
                 expected: vec![expected.type_name().to_string()],
@@ -223,6 +227,16 @@ impl ParseContext {
     /// within this context if requested.
     pub(super) fn add_module(&mut self, name: String, module: Module) {
         self.modules.insert(name, module);
+    }
+
+    /// Gets the name of the widget currently being parsed.
+    pub(super) fn get_current_widget(&self) -> &Option<String> {
+        &self.current_widget
+    }
+
+    /// Sets the name of the widget currently being parsed.
+    pub(super) fn set_current_widget(&mut self, name: Option<String>) {
+        self.current_widget = name;
     }
 }
 

@@ -43,6 +43,7 @@ impl NekoUITree {
     /// Extends the defined variables.
     pub fn with_variables(mut self, variables: HashMap<String, PropertyValue>) -> Self {
         self.variables.extend(variables);
+        self.mark_dirty();
         self
     }
 

@@ -4,13 +4,14 @@
 
 use bevy::prelude::*;
 
-use crate::{asset::{NekoMaidAssetLoader, NekoMaidUI}, marker::MarkerRegistry};
+use crate::asset::{NekoMaidAssetLoader, NekoMaidUI};
+use crate::marker::MarkerRegistry;
 
 pub mod asset;
 pub mod components;
+pub mod marker;
 pub mod native;
 pub mod parse;
-pub mod marker;
 mod systems;
 
 /// A Bevy UI plugin: NekoMaid

@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, LitStr};
+use syn::{DeriveInput, LitStr, parse_macro_input};
 
 #[proc_macro_derive(NekoMarker, attributes(neko_marker))]
 pub fn derive_neko_marker(input: TokenStream) -> TokenStream {
@@ -19,8 +19,7 @@ pub fn derive_neko_marker(input: TokenStream) -> TokenStream {
         }
     }
 
-    let marker_value = marker_value
-        .expect("Missing #[neko_marker(\"...\")] attribute");
+    let marker_value = marker_value.expect("Missing #[neko_marker(\"...\")] attribute");
 
     let expanded = quote! {
         impl NekoMarker for #ident {

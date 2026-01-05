@@ -90,6 +90,11 @@ layout div {
             with p {
                 text: "Body content.";
             }
+
+            // this raises an error since top-level layouts
+            // cannot have output slots
+            // output;
         }
     }
+
 }

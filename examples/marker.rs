@@ -1,7 +1,8 @@
-use bevy::{color::palettes::css::RED, prelude::*};
+use bevy::color::palettes::css::RED;
+use bevy::prelude::*;
 use neko_derive::NekoMarker;
-use neko_maid::{components::NekoUITree, marker::{NekoMarker, MarkerAppExt}};
-
+use neko_maid::components::NekoUITree;
+use neko_maid::marker::{MarkerAppExt, NekoMarker};
 
 #[derive(Component, NekoMarker)]
 #[neko_marker("test")]
@@ -24,10 +25,7 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn(NekoUITree::new(handle));
 }
 
-pub fn spawned_test(
-    event: On<Add, Test>,
-    mut cmds: Commands,
-) {
+pub fn spawned_test(event: On<Add, Test>, mut cmds: Commands) {
     // Could add any arbitrary logic here. We're gonna just build some UI manually.
 
     println!("Spawned test {}", event.entity);

@@ -10,7 +10,6 @@ use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::token::TokenType;
 use crate::parse::value::PropertyValue;
 
-
 /// A property within a style or element.
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct UnresolvedProperty {
@@ -33,10 +32,7 @@ pub(crate) enum UnresolvedPropertyValue {
 
 impl UnresolvedPropertyValue {
     /// Resolves the property value using the provided variable map.
-    pub fn resolve(
-        &self,
-        variables: &HashMap<String, PropertyValue>,
-    ) -> NekoResult<PropertyValue> {
+    pub fn resolve(&self, variables: &HashMap<String, PropertyValue>) -> NekoResult<PropertyValue> {
         match self {
             UnresolvedPropertyValue::Constant(v) => Ok(v.clone()),
             UnresolvedPropertyValue::Variable(var_name) => {

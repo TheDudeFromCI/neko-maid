@@ -87,7 +87,7 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
 
     ctx.expect(TokenType::OpenBrace)?;
 
-    while let Some(next) = ctx.peek() {
+    while let Some(next) = ctx.peek().cloned() {
         match next.token_type {
             TokenType::Identifier => {
                 let property = parse_unresolved_property(ctx)?;
@@ -136,6 +136,8 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
                         TokenType::Identifier.type_name().to_string(),
                         TokenType::ClassKeyword.type_name().to_string(),
                         TokenType::WithKeyword.type_name().to_string(),
+                        TokenType::OutputKeyword.type_name().to_string(),
+                        TokenType::InKeyword.type_name().to_string(),
                         TokenType::CloseBrace.type_name().to_string(),
                     ],
                     found: next.token_type.type_name().to_string(),
@@ -151,11 +153,20 @@ pub(super) fn parse_layout(ctx: &mut ParseContext) -> NekoResult<Layout> {
 
 /// Parses a slot statement.
 pub(super) fn parse_slot(ctx: &mut ParseContext) -> NekoResult<String> {
-    ctx.expect(TokenType::OutputKeyword)?;
+    let token = ctx.expect(TokenType::OutputKeyword)?;
+
+    if ctx.get_current_widget().is_none() {
+        return Err(NekoMaidParseError::TopLevelLayoutWithInvalidOutput {
+            position: token.position,
+        });
+    }
 
     let name = ctx
         .maybe_consume(TokenType::Identifier)
-        .and_then(|t| match t { TokenValue::String(s) => Some(s), _ => None })
+        .and_then(|t| match t.value {
+            TokenValue::String(s) => Some(s),
+            _ => None,
+        })
         .unwrap_or("default".to_string());
 
     ctx.expect(TokenType::Semicolon)?;
@@ -202,9 +213,8 @@ pub(super) fn parse_in(ctx: &mut ParseContext) -> NekoResult<InStatement> {
             _ => {
                 return Err(NekoMaidParseError::UnexpectedToken {
                     expected: vec![
-                        TokenType::Identifier.type_name().to_string(),
-                        TokenType::ClassKeyword.type_name().to_string(),
                         TokenType::WithKeyword.type_name().to_string(),
+                        TokenType::OutputKeyword.type_name().to_string(),
                         TokenType::CloseBrace.type_name().to_string(),
                     ],
                     found: next.token_type.type_name().to_string(),

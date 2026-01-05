@@ -169,10 +169,13 @@ pub enum NekoMaidParseError {
 
     /// An error indicating that multiple output slots were defined in a single
     /// widget definition.
-    #[error("A widget cannot have multiple output slots defined: {widget} at {position}")]
-    MultipleWidgetOutputsDefined {
+    #[error("Layout of widget {widget} at {position} contains duplicated '{name}' output slots.")]
+    LayoutWithDuplicatedOutputs {
         /// The name of the widget with multiple outputs.
         widget: String,
+
+        /// The name of the slot.
+        name: String,
 
         /// The position of the widget definition in the source code.
         position: TokenPosition,
@@ -185,6 +188,13 @@ pub enum NekoMaidParseError {
         widget: String,
 
         /// The position of the widget definition in the source code.
+        position: TokenPosition,
+    },
+
+    /// An error indicating that a top-level has an output slot.
+    #[error("Top-level layout with invalid output at {position}.")]
+    TopLevelLayoutWithInvalidOutput {
+        /// The position of the invalid output statement in the source code.
         position: TokenPosition,
     },
 }
