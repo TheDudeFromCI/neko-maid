@@ -1,0 +1,97 @@
+
+
+def item {
+    var color = #aaaaaa;
+    var value = "";
+
+    layout div {
+        padding: 10;
+        background-color: $color;
+        border-radius: 4;
+
+        with p {
+            text: $value;
+        }
+
+        output;
+    }
+}
+
+def row {
+    var c = #aaaaaa;
+
+    layout div {
+        flex-direction: row;
+        column-gap: 10;
+
+        with item { color: $c; value: "0"; }
+        with item { color: $c; value: "1"; }
+        with item { color: $c; value: "2"; }
+        with item { color: $c; value: "3"; }
+        with item { color: $c; value: "4"; }
+        with item { color: $c; value: "5"; }
+        with item { color: $c; value: "6"; }
+        with item { color: $c; value: "7"; }
+        with item { color: $c; value: "8"; }
+        with item { color: $c; value: "9"; }
+        with item { color: $c; value: "10"; }
+        with item { color: $c; value: "11"; }
+        with item { color: $c; value: "12"; }
+        with item { color: $c; value: "13"; }
+        with item { color: $c; value: "14"; }
+        with item { color: $c; value: "15"; }
+        with item { color: $c; value: "16"; }
+        with item { color: $c; value: "17"; }
+        with item { color: $c; value: "18"; }
+        with item { color: $c; value: "19"; }
+        with item { color: $c; value: "20"; }
+        with item { color: $c; value: "21"; }
+        with item { color: $c; value: "22"; }
+        with item { color: $c; value: "23"; }
+        with item { color: $c; value: "24"; }
+        with item { color: $c; value: "25"; }
+        with item { color: $c; value: "26"; }
+        with item { color: $c; value: "27"; }
+        with item { color: $c; value: "28"; }
+        with item { color: $c; value: "29"; }
+        with item { color: $c; value: "30"; }
+        with item { color: $c; value: "31"; }
+        with item { color: $c; value: "32"; }
+        with item { color: $c; value: "33"; }
+        with item { color: $c; value: "34"; }
+        with item { color: $c; value: "35"; }
+        with item { color: $c; value: "36"; }
+
+        output;
+    }
+}
+
+
+layout div {
+    justify-content: start;
+    align-items: start;
+    padding: 5;
+    flex-direction: column;
+    row-gap: 10;
+
+    with row { c: #ffaaaa; }
+    with row { c: #ffffaa; }
+    with row { c: #aaffaa; }
+    with row { c: #aaffff; }
+    with row { c: #aaaaff; }
+    with row { c: #ffaaff; }
+    with row { c: #ffaaaa; }
+    with row { c: #ffffaa; }
+    with row { c: #aaffaa; }
+    with row { c: #aaffff; }
+    with row { c: #aaaaff; }
+    with row { c: #ffaaff; }
+    with row { c: #ffaaaa; }
+    with row { c: #ffffaa; }
+    with row { c: #aaffaa; }
+    with row { c: #aaffff; }
+    with row { c: #aaaaff; }
+    with row { c: #ffaaff; }
+    with row { c: #ffaaaa; }
+    with row { c: #ffffaa; }
+}

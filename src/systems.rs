@@ -1,5 +1,7 @@
 //! Systems used by the NekoMaid plugin.
 
+use std::time::Instant;
+
 use bevy::asset::{AssetLoadFailedEvent, LoadState};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -28,6 +30,7 @@ pub(super) fn spawn_tree(
         if !root.is_dirty() {
             continue;
         }
+        let t = Instant::now();
 
         root.clear_dirty();
         commands.entity(entity).despawn_children();
@@ -64,6 +67,8 @@ pub(super) fn spawn_tree(
             }
             spawn_element(&asset_server, &markers, &mut commands, &element, entity);
         }
+
+        info!("Spawned tree {entity} in {} ms.", t.elapsed().as_millis());
     }
 }
 
