@@ -18,5 +18,10 @@ jobs:
       - name: install linux deps
         run: >
           sudo apt-get update;
-          sudo apt-get install --no-install-recommends libwayland-dev libxkbcommon-dev libx264-164 libx264-dev;
+          sudo apt-get install --no-install-recommends
+          libasound2-dev            # alsa
+          libudev-dev               # udev
+          libwayland-dev            # wayland
+          libxkbcommon-dev          # xkb
+          libx264-164 libx264-dev;  # x264
       - run: cargo test
