@@ -1,7 +1,5 @@
 //! Tests
 
-use std::sync::Arc;
-
 use bevy::asset::AssetServer;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::system::{Commands, Res};
@@ -21,7 +19,6 @@ fn spawn_func(_: &Res<AssetServer>, _: &mut Commands, _: &NekoElement, _: Entity
 fn native<S: Into<String>>(name: S) -> NativeWidget {
     NativeWidget {
         name: name.into(),
-        default_properties: Arc::new(HashMap::new()),
         spawn_func,
     }
 }

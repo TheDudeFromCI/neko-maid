@@ -1,7 +1,5 @@
 //! A module for parsing and representing NekoMaid UI finalized elements.
 
-use std::sync::Arc;
-
 use bevy::ecs::component::Component;
 use bevy::platform::collections::{HashMap, HashSet};
 
@@ -28,6 +26,15 @@ pub(crate) struct NekoElementBuilder {
     pub(crate) children: Vec<NekoElementBuilder>,
 }
 
+/// A style entry in an element.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StyleEntry {
+    /// The style.
+    value: Style,
+    /// Whether the current style is active i.e matches the current class path.
+    active: bool,
+}
+
 /// A component representing a NekoMaid UI element.
 #[derive(Debug, Component, Clone, PartialEq)]
 pub struct NekoElement {
@@ -35,7 +42,14 @@ pub struct NekoElement {
     classpath: ClassPath,
 
     /// The styles applied to this element.
-    styles: Vec<Style>,
+    styles: Vec<StyleEntry>,
+
+    /// A map that tells where a property applied to this
+    /// element comes from. If `Some(i)`, the property
+    /// comes from the i-th style, while if it's `None`,
+    /// the property is local to this element and lives
+    /// in the `properties` map.
+    active_properties: HashMap<String, Option<usize>>,
 
     /// The variables in scope for this element.
     variables: HashMap<String, UnresolvedPropertyValue>,
@@ -45,12 +59,27 @@ pub struct NekoElement {
 
     /// The concrete properties applied to this element.
     properties: HashMap<String, PropertyValue>,
-
-    /// The default properties of this element, from the native widget.
-    default_properties: Arc<HashMap<String, PropertyValue>>,
 }
 
 impl NekoElement {
+    /// Creates a new element.
+    pub(crate) fn new(
+        classpath: ClassPath,
+        variables: HashMap<String, UnresolvedPropertyValue>,
+        unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
+    ) -> Self {
+        let mut s = Self {
+            classpath,
+            styles: Vec::new(),
+            active_properties: HashMap::new(),
+            variables,
+            unresolved_properties,
+            properties: HashMap::new(),
+        };
+        s.update_active_properties();
+        s
+    }
+
     /// Returns a reference to the class path of this element.
     pub fn classpath(&self) -> &ClassPath {
         &self.classpath
@@ -78,17 +107,80 @@ impl NekoElement {
 
     /// Returns a reference to the styles applied to this element.
     ///
-    /// Styles earlier in the vector have higher precedence.
-    pub fn styles(&self) -> &Vec<Style> {
-        &self.styles
+    /// Styles earlier in the vector have lower precedence.
+    pub fn styles(&self) -> impl Iterator<Item = &Style> {
+        self.styles.iter().map(|e| &e.value)
     }
 
     /// Tries to add a style to the styles applied to this element. If the style
     /// has a selector that cannot match this element, it will not be added.
     pub fn try_add_style(&mut self, style: &Style) {
         if self.classpath.partial_matches(style.selector()) {
-            self.styles.insert(0, style.clone());
+            let active = self.classpath.matches(style.selector());
+
+            let entry = StyleEntry {
+                value: style.clone(),
+                active,
+            };
+            self.styles.push(entry);
+
+            if active {
+                self.update_style_properties(self.styles.len() - 1);
+            }
         }
+    }
+
+    /// Updates the list of all properties applied to this element.
+    pub fn update_active_properties(&mut self) {
+        self.active_properties.clear();
+
+        for (name, _) in &self.unresolved_properties {
+            self.active_properties.insert(name.clone(), None);
+        }
+
+        for i in (0 .. self.styles.len()).rev() {
+            if !self.styles[i].active {
+                continue;
+            }
+            self.update_style_properties(i);
+        }
+    }
+    fn update_style_properties(&mut self, i: usize) {
+        let style_properties = self.styles[i].value.unresolved_properties.keys();
+        for name in style_properties {
+            let j = match self.active_properties.get(name) {
+                Some(j) => j.unwrap_or(usize::MAX),
+                None => 0,
+            };
+            if i >= j {
+                self.active_properties.insert(name.clone(), Some(i));
+            }
+        }
+    }
+    /// Returns the name of all active properties in this element,
+    /// including indirect properties coming from styles.
+    pub fn active_properties(&self) -> impl Iterator<Item = &String> {
+        self.active_properties.keys()
+    }
+
+    /// Resolve properties for this element
+    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
+        for style in &mut self.styles {
+            style.value.resolve(variables)?;
+        }
+
+        let mut variables = variables.clone();
+        for (name, value) in &self.variables {
+            let prop = value.resolve(&variables)?;
+            variables.insert(name.clone(), prop);
+        }
+
+        for (name, value) in &self.unresolved_properties {
+            let prop = value.resolve(&variables)?;
+            self.properties.insert(name.clone(), prop);
+        }
+
+        Ok(())
     }
 
     /// Returns a reference to the property map of this element.
@@ -107,49 +199,21 @@ impl NekoElement {
     /// element. It is recommended to only check for properties when
     /// necessary (e.g. on class changes or style updates).
     pub fn get_property(&self, name: &str) -> Option<&PropertyValue> {
-        if let Some(value) = self.properties.get(name) {
-            return Some(value);
-        };
-
-        for style in &self.styles {
-            if let Some(value) = style.get_property(name)
-                && self.classpath.matches(style.selector())
-            {
-                return Some(value);
-            }
+        let origin = self.active_properties.get(name)?;
+        match *origin {
+            Some(i) => self.styles[i].value.get_property(name),
+            None => self.properties.get(name),
         }
-
-        self.default_properties.get(name)
-    }
-
-    /// Resolve properties for this element
-    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
-        for style in &mut self.styles {
-            style.resolve(variables)?;
-        }
-
-        let mut variables = variables.clone();
-        for (name, value) in &self.variables {
-            let prop = value.resolve(&variables)?;
-            variables.insert(name.clone(), prop);
-        }
-
-        for (name, value) in &self.unresolved_properties {
-            let prop = value.resolve(&variables)?;
-            self.properties.insert(name.clone(), prop);
-        }
-
-        Ok(())
     }
 
     /// Attempts to get a property and automatically convert it to the desired
     /// type. If the property is not found, returns the default value for the
     /// type.
-    pub fn get_as<'a, O>(&'a self, name: &str) -> O
+    pub fn get_as<'a, O>(&'a self, name: &str) -> Option<O>
     where
         O: From<&'a PropertyValue> + Default,
     {
-        self.get_property(name).map(Into::into).unwrap_or_default()
+        self.get_property(name).map(Into::into)
     }
 
     /// Attempts to get a property and automatically convert it to the desired
@@ -159,28 +223,6 @@ impl NekoElement {
         O: From<&'a PropertyValue>,
     {
         self.get_property(name).map(Into::into).unwrap_or(def)
-    }
-
-    /// Attempts to get a property, ignoring all default values provided by the
-    /// native widget, and automatically convert it to the desired type. If the
-    /// property is not found, returns the provided value.
-    pub fn get_no_default<'a, O>(&'a self, name: &str, def: O) -> O
-    where
-        O: From<&'a PropertyValue>,
-    {
-        if let Some(value) = self.properties.get(name) {
-            return value.into();
-        };
-
-        for style in &self.styles {
-            if let Some(value) = style.get_property(name)
-                && self.classpath.matches(style.selector())
-            {
-                return value.into();
-            }
-        }
-
-        def
     }
 }
 
@@ -227,15 +269,7 @@ pub(super) fn build_element(
                 }
             }
 
-            let mut element = NekoElement {
-                classpath,
-                styles: Vec::new(),
-                variables: variables.clone(),
-                unresolved_properties: layout.properties,
-                properties: HashMap::new(),
-                default_properties: native_widget.default_properties.clone(),
-            };
-
+            let mut element = NekoElement::new(classpath, variables.clone(), layout.properties);
             for style in styles {
                 element.try_add_style(style);
             }

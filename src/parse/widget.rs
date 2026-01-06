@@ -1,7 +1,5 @@
 //! A module for parsing NekoMaid UI widget definitions.
 
-use std::sync::Arc;
-
 use bevy::asset::AssetServer;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::system::{Commands, Res};
@@ -13,7 +11,6 @@ use crate::parse::element::NekoElement;
 use crate::parse::layout::{Layout, parse_layout};
 use crate::parse::property::{UnresolvedPropertyValue, parse_variable};
 use crate::parse::token::{TokenPosition, TokenType};
-use crate::parse::value::PropertyValue;
 
 /// A NekoMaid UI widget definition.
 #[derive(Debug, Clone, PartialEq)]
@@ -53,9 +50,6 @@ pub(crate) struct CustomWidget {
 pub struct NativeWidget {
     /// The name of the widget.
     pub name: String,
-
-    /// The default properties of the widget.
-    pub default_properties: Arc<HashMap<String, PropertyValue>>,
 
     /// The function used to spawn the widget.
     ///

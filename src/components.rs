@@ -4,7 +4,19 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::asset::NekoMaidUI;
+use crate::parse::element::NekoElement;
 use crate::parse::value::PropertyValue;
+
+/// A component representing a node of a NekoMaid UI tree.
+#[derive(Component)]
+pub struct NekoUINode {
+    /// The entity with the NekoUITree component.
+    pub root: Entity,
+    /// The element struct that this node renders.
+    pub element: NekoElement,
+    /// A list of properties that changed and need to be re-rendered.
+    pub updated_properties: Vec<String>,
+}
 
 /// A component representing the root of a NekoMaid UI tree.
 #[derive(Debug, Component)]

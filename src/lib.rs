@@ -6,13 +6,14 @@ use bevy::prelude::*;
 
 use crate::asset::{NekoMaidAssetLoader, NekoMaidUI};
 use crate::marker::MarkerRegistry;
+use crate::render::systems;
 
 pub mod asset;
 pub mod components;
 pub mod marker;
 pub mod native;
 pub mod parse;
-mod systems;
+pub mod render;
 
 /// A Bevy UI plugin: NekoMaid
 ///
@@ -27,7 +28,9 @@ impl Plugin for NekoMaidPlugin {
             .add_systems(
                 Update,
                 (
-                    systems::spawn_tree.in_set(NekoMaidSystems::UpdateTree),
+                    (systems::spawn_tree, systems::update_nodes)
+                        .chain()
+                        .in_set(NekoMaidSystems::UpdateTree),
                     systems::update_tree.in_set(NekoMaidSystems::AssetListener),
                     systems::asset_failure.in_set(NekoMaidSystems::AssetListener),
                 ),
