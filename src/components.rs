@@ -1,10 +1,12 @@
 //! Components used for the NekoMaid plugin.
 
-use bevy::platform::collections::HashMap;
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
+use lazy_static::lazy_static;
 
 use crate::asset::NekoMaidUI;
 use crate::parse::element::NekoElement;
+use crate::parse::scope::{ScopeId, ScopeName, ScopeTree};
 use crate::parse::value::PropertyValue;
 
 /// A component representing a node of a NekoMaid UI tree.
@@ -18,6 +20,28 @@ pub struct NekoUINode {
     pub updated_properties: Vec<String>,
 }
 
+lazy_static! {
+    static ref EMPTY_SET: HashSet<Entity> = HashSet::new();
+}
+
+/// 
+#[derive(Debug, Deref, DerefMut, Default)]
+pub(crate) struct ScopeNotificationMap {
+    #[deref]
+    map: HashMap<ScopeId, HashSet<Entity>>
+}
+impl ScopeNotificationMap {
+    /// Register a node entity as listener to the scope specified.
+    pub fn register(&mut self, scope: ScopeId, entity: Entity) {
+        self.map.entry(scope).or_default().insert(entity);
+    }
+
+    /// Returns an iterator of node entities that listen to changes in the given scope.
+    pub fn get(&self, scope: ScopeId) -> impl Iterator<Item=Entity> {
+        self.map.get(&scope).unwrap_or(&EMPTY_SET).iter().cloned()
+    }
+}
+
 /// A component representing the root of a NekoMaid UI tree.
 #[derive(Debug, Component)]
 #[require(Node)]
@@ -29,7 +53,16 @@ pub struct NekoUITree {
     dirty: bool,
 
     /// Variables that should be inserted into the global context.
-    variables: HashMap<String, PropertyValue>,
+    pub(crate) variables: HashMap<String, PropertyValue>,
+
+    /// The scope tree used to render elements from this tree.
+    pub(crate) scope: ScopeTree,
+
+    /// Scope names to update.
+    pub(crate) update_names: HashSet<ScopeName>,
+
+    /// A map to trigger node updates when a targetted scope changes.
+    pub(crate) scope_notification: ScopeNotificationMap,
 }
 
 impl NekoUITree {
@@ -39,6 +72,9 @@ impl NekoUITree {
             asset,
             variables: HashMap::new(),
             dirty: true,
+            scope: ScopeTree::default(),
+            update_names: HashSet::new(),
+            scope_notification: ScopeNotificationMap::default(),
         }
     }
 
@@ -54,15 +90,16 @@ impl NekoUITree {
 
     /// Extends the defined variables.
     pub fn with_variables(mut self, variables: HashMap<String, PropertyValue>) -> Self {
-        self.variables.extend(variables);
-        self.mark_dirty();
+        for (name, value) in variables {
+            self.set_variable(&name, value);
+        }
         self
     }
 
     /// Sets a variable to the specified value.
     pub fn set_variable(&mut self, name: &str, value: PropertyValue) {
         self.variables.insert(name.to_owned(), value);
-        self.mark_dirty();
+        self.update_names.insert(ScopeName::Variable(name.to_owned(), ScopeId(0)));
     }
 
     /// Marks the tree as dirty, indicating that it needs to be re-spawned.

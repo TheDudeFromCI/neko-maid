@@ -3,16 +3,16 @@
 use std::time::Instant;
 
 use bevy::asset::{AssetLoadFailedEvent, LoadState};
-use bevy::platform::collections::HashMap;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use crate::asset::NekoMaidUI;
-use crate::components::{NekoUINode, NekoUITree};
+use crate::components::{NekoUINode, NekoUITree, ScopeNotificationMap};
 use crate::marker::MarkerRegistry;
-use crate::parse::context::NekoResult;
 use crate::parse::element::NekoElementBuilder;
-use crate::parse::value::PropertyValue;
+use crate::parse::scope::ScopeId;
 use crate::render::update::update_node;
+
 
 /// Listens for changes to the [`NekoUITree`] component and spawns the UI tree
 /// accordingly.
@@ -50,25 +50,17 @@ pub(crate) fn spawn_tree(
             continue;
         };
 
-        let mut variables = root.variables().clone();
-        for (name, unresolved) in &asset.variables {
-            if variables.contains_key(name) {
-                continue;
-            }
-
-            if let Ok(v) = unresolved.resolve(&variables) {
-                variables.insert(name.clone(), v);
-            }
+        root.scope = asset.scope.clone();
+        for name in asset.scope.dependency_graph().nodes() {
+            root.update_names.insert(name.clone());
         }
+        root.scope_notification.clear();
 
         for element in &asset.elements {
-            let mut element = element.clone();
-            if let Err(e) = resolve_scope(&mut element, &variables) {
-                error!("{}", e);
-            }
             spawn_element(
                 &asset_server,
                 &markers,
+                &mut root.scope_notification,
                 &mut commands,
                 &element,
                 root_entity,
@@ -76,7 +68,7 @@ pub(crate) fn spawn_tree(
             );
         }
 
-        info!(
+        debug!(
             "Spawned tree {root_entity} in {} ms.",
             t.elapsed().as_millis()
         );
@@ -87,6 +79,7 @@ pub(crate) fn spawn_tree(
 fn spawn_element(
     asset_server: &Res<AssetServer>,
     markers: &MarkerRegistry,
+    scope_notification: &mut ScopeNotificationMap,
     commands: &mut Commands,
     element: &NekoElementBuilder,
     parent: Entity,
@@ -96,44 +89,93 @@ fn spawn_element(
         (element.native_widget.spawn_func)(asset_server, commands, &element.element, parent);
 
     markers.insert(commands.entity(entity), &element.element);
+    scope_notification.register(element.element.scope_id(), entity);
+
+    // FIX this actually should be executed every time there is a class update
+    for style in element.element.active_styles() {
+        scope_notification.register(style.scope_id, entity);
+    }
 
     commands.entity(entity).insert((NekoUINode {
-        element: element.element.clone(),
-        updated_properties: element
-            .element
-            .active_properties()
-            .cloned()
-            .collect::<Vec<_>>(),
         root,
+        element: element.element.clone(),
+        updated_properties: vec![],
     },));
 
     for child in &element.children {
-        spawn_element(asset_server, markers, commands, child, entity, root);
+        spawn_element(asset_server, markers, scope_notification, commands, child, entity, root);
     }
 }
 
-/// Resolve variable scope
-pub(crate) fn resolve_scope(
-    element: &mut NekoElementBuilder,
-    variables: &HashMap<String, PropertyValue>,
-) -> NekoResult<()> {
-    element.element.resolve(variables)?;
+/// Update scope of Neko UI trees.
+pub fn update_scope(
+    mut roots: Query<(Entity, &mut NekoUITree), Changed<NekoUITree>>,
+    mut nodes: Query<&mut NekoUINode>,
+) {
+    for (entity, root) in roots.iter_mut() {
+        let t = Instant::now();
 
-    let mut variables = variables.clone();
-    for (name, value) in element.element.properties() {
-        variables.insert(name.clone(), value.clone());
+        let root = root.into_inner();
+        let scopes = &mut root.scope;
+
+        let Some(global_scope) = scopes.get_mut(ScopeId(0)) else {
+            return;
+        };
+        
+        let update_names = &root.update_names;
+        if update_names.is_empty() {
+            return;
+        }
+        global_scope.add_resolved_variables(root.variables.iter());
+
+        let variables = {
+            let graph = scopes.dependency_graph();
+
+            let mut to_update = HashSet::new();
+            let mut remaining = update_names.iter().collect::<Vec<_>>();
+            while let Some(name) = remaining.pop() {
+                to_update.insert(name);
+                remaining.extend(graph.get_dependents(name));
+            }
+
+            let mut variables = to_update.iter().map(|&n| n.clone()).collect::<Vec<_>>();
+            let order = graph.order_map();
+            variables.sort_by_key(|n| order.get(n).unwrap_or(&0));
+
+            variables
+        };
+
+        // println!(
+        //     "Updating variables: {}",
+        //     variables
+        //         .iter()
+        //         .map(|v| format!("{v}"))
+        //         .collect::<Vec<_>>()
+        //         .join(", ")
+        // );
+
+        for name in &variables {
+            scopes.evaluate(name);
+
+            for entity in root.scope_notification.get(name.scope_id()) {
+                let Ok(mut node) = nodes.get_mut(entity) else { continue };
+                node.updated_properties.push(name.name().clone());
+            }
+        }
+
+        root.update_names.clear();
+
+        debug!(
+            "Updated scope of {entity} in {} ms.",
+            t.elapsed().as_millis()
+        );
     }
-
-    for child in &mut element.children {
-        resolve_scope(child, &variables)?;
-    }
-
-    Ok(())
 }
 
 /// Update node properties.
 pub(crate) fn update_nodes(
     asset_server: Res<AssetServer>,
+    mut roots: Query<&mut NekoUITree>,
     q: Query<
         (
             &mut NekoUINode,
@@ -151,8 +193,12 @@ pub(crate) fn update_nodes(
         Changed<NekoUINode>,
     >,
 ) {
+    if q.is_empty() { return }
+
+    let t = Instant::now();
+
     for (
-        mut neko_node,
+        neko_node,
         mut node,
         mut border_color,
         mut border_radius,
@@ -167,12 +213,21 @@ pub(crate) fn update_nodes(
     {
         // println!("Updating properties {:?} from {entity}",
         // neko_node.updated_properties);
-        let properties = neko_node.updated_properties.iter();
+        let NekoUINode {
+            updated_properties,
+            element,
+            root,
+            ..
+        } = neko_node.into_inner();
+
+        let Ok(mut root) = roots.get_mut(*root) else {
+            continue;
+        };
 
         update_node(
             &asset_server,
-            &neko_node.element,
-            properties,
+            element.view_mut(&mut root.scope),
+            updated_properties.iter(),
             &mut node,
             &mut border_color,
             &mut border_radius,
@@ -185,8 +240,13 @@ pub(crate) fn update_nodes(
             &mut layout.map(|v| v.into_inner()),
         );
 
-        neko_node.updated_properties.clear();
+        updated_properties.clear();
     }
+
+    debug!(
+        "Updated node properties in {} ms.",
+        t.elapsed().as_millis()
+    );
 }
 
 /// Listens for changes to the [`NekoMaidUI`] asset and updates any existing UI

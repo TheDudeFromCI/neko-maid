@@ -28,7 +28,11 @@ impl Plugin for NekoMaidPlugin {
             .add_systems(
                 Update,
                 (
-                    (systems::spawn_tree, systems::update_nodes)
+                    (
+                        systems::spawn_tree,
+                        systems::update_scope,
+                        systems::update_nodes,
+                    )
                         .chain()
                         .in_set(NekoMaidSystems::UpdateTree),
                     systems::update_tree.in_set(NekoMaidSystems::AssetListener),

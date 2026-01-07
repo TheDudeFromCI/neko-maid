@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::parse::element::NekoElement;
+use crate::parse::element::NekoElementView;
 use crate::parse::value::PropertyValue;
 
 macro_rules! d {
@@ -18,7 +18,7 @@ macro_rules! d {
 /// properties.
 pub fn update_node<'a>(
     asset_server: &Res<AssetServer>,
-    element: &NekoElement,
+    mut element: NekoElementView<'a>,
     updated_properties: impl Iterator<Item = &'a String>,
     // node
     node: &mut Node,
@@ -35,6 +35,7 @@ pub fn update_node<'a>(
     layout: &mut Option<&mut TextLayout>,
 ) {
     for property in updated_properties {
+        // println!("Updating {property}");
         match property.as_str() {
             // --- node ---
 

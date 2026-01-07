@@ -2,12 +2,13 @@
 
 use bevy::ecs::component::Component;
 use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::Deref;
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::class::{ClassPath, ClassSet};
 use crate::parse::context::NekoResult;
 use crate::parse::layout::Layout;
-use crate::parse::property::UnresolvedPropertyValue;
+use crate::parse::scope::{ScopeId, ScopeTree};
 use crate::parse::style::Style;
 use crate::parse::token::TokenPosition;
 use crate::parse::value::PropertyValue;
@@ -48,36 +49,24 @@ pub struct NekoElement {
     /// element comes from. If `Some(i)`, the property
     /// comes from the i-th style, while if it's `None`,
     /// the property is local to this element and lives
-    /// in the `properties` map.
+    /// in the element scope.
     active_properties: HashMap<String, Option<usize>>,
+    dirty_active_properties: bool,
 
-    /// The variables in scope for this element.
-    variables: HashMap<String, UnresolvedPropertyValue>,
-
-    /// The properties of this element before variable resolution.
-    unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
-
-    /// The concrete properties applied to this element.
-    properties: HashMap<String, PropertyValue>,
+    /// Scope id
+    scope: ScopeId,
 }
 
 impl NekoElement {
     /// Creates a new element.
-    pub(crate) fn new(
-        classpath: ClassPath,
-        variables: HashMap<String, UnresolvedPropertyValue>,
-        unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
-    ) -> Self {
-        let mut s = Self {
+    pub(crate) fn new(classpath: ClassPath, scope_id: ScopeId) -> Self {
+        Self {
             classpath,
             styles: Vec::new(),
             active_properties: HashMap::new(),
-            variables,
-            unresolved_properties,
-            properties: HashMap::new(),
-        };
-        s.update_active_properties();
-        s
+            dirty_active_properties: false,
+            scope: scope_id,
+        }
     }
 
     /// Returns a reference to the class path of this element.
@@ -108,8 +97,10 @@ impl NekoElement {
     /// Returns a reference to the styles applied to this element.
     ///
     /// Styles earlier in the vector have lower precedence.
-    pub fn styles(&self) -> impl Iterator<Item = &Style> {
-        self.styles.iter().map(|e| &e.value)
+    pub fn active_styles(&self) -> impl Iterator<Item = &Style> {
+        self.styles.iter()
+            .filter(|e| e.active)
+            .map(|e| &e.value)
     }
 
     /// Tries to add a style to the styles applied to this element. If the style
@@ -125,110 +116,129 @@ impl NekoElement {
             self.styles.push(entry);
 
             if active {
-                self.update_style_properties(self.styles.len() - 1);
+                self.dirty_active_properties = true;
             }
         }
     }
 
-    /// Updates the list of all properties applied to this element.
-    pub fn update_active_properties(&mut self) {
-        self.active_properties.clear();
-
-        for (name, _) in &self.unresolved_properties {
-            self.active_properties.insert(name.clone(), None);
-        }
-
-        for i in (0 .. self.styles.len()).rev() {
-            if !self.styles[i].active {
-                continue;
-            }
-            self.update_style_properties(i);
-        }
-    }
-    fn update_style_properties(&mut self, i: usize) {
-        let style_properties = self.styles[i].value.unresolved_properties.keys();
-        for name in style_properties {
-            let j = match self.active_properties.get(name) {
-                Some(j) => j.unwrap_or(usize::MAX),
-                None => 0,
-            };
-            if i >= j {
-                self.active_properties.insert(name.clone(), Some(i));
-            }
-        }
-    }
     /// Returns the name of all active properties in this element,
     /// including indirect properties coming from styles.
     pub fn active_properties(&self) -> impl Iterator<Item = &String> {
         self.active_properties.keys()
     }
 
-    /// Resolve properties for this element
-    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
-        for style in &mut self.styles {
-            style.value.resolve(variables)?;
-        }
-
-        let mut variables = variables.clone();
-        for (name, value) in &self.variables {
-            let prop = value.resolve(&variables)?;
-            variables.insert(name.clone(), prop);
-        }
-
-        for (name, value) in &self.unresolved_properties {
-            let prop = value.resolve(&variables)?;
-            self.properties.insert(name.clone(), prop);
-        }
-
-        Ok(())
+    /// Returns the id of the scope used by this element.
+    pub(crate) fn scope_id(&self) -> ScopeId {
+        self.scope
     }
 
-    /// Returns a reference to the property map of this element.
-    pub fn properties(&self) -> &HashMap<String, PropertyValue> {
-        &self.properties
+    /// Returns a mutable view on the element's properties given scope context.
+    pub(crate) fn view_mut<'a>(&'a mut self, scopes: &'a mut ScopeTree) -> NekoElementView<'a> {
+        NekoElementView { el: self, scopes }
     }
+}
 
-    /// Sets a property directly on this element, overriding all styles.
-    pub fn set_property(&mut self, name: String, value: PropertyValue) {
-        self.properties.insert(name, value);
+/// A view on the element's properties given scope context.
+#[derive(Debug, Deref)]
+pub struct NekoElementView<'a> {
+    #[deref]
+    el: &'a mut NekoElement,
+    scopes: &'a mut ScopeTree,
+}
+
+impl<'a> NekoElementView<'a> {
+    /// Updates the list of all properties applied to this element.
+    pub fn update_active_properties(&mut self) {
+        self.el.active_properties.clear();
+
+        let Some(scope) = self.scopes.get(self.el.scope) else {
+            return;
+        };
+        for name in scope.properties() {
+            self.el.active_properties.insert(name.clone(), None);
+        }
+
+        for i in (0 .. self.el.styles.len()).rev() {
+            if !self.el.styles[i].active {
+                continue;
+            }
+            self.update_style_properties(i);
+        }
+
+        self.el.dirty_active_properties = false;
+    }
+    fn update_style_properties(&mut self, i: usize) {
+        let style = &self.el.styles[i].value;
+        let Some(scope) = self.scopes.get(style.scope_id) else { return };
+        for name in scope.properties() {
+            let j = match self.el.active_properties.get(name) {
+                Some(j) => j.unwrap_or(usize::MAX),
+                None => 0,
+            };
+            if i >= j {
+                self.el.active_properties.insert(name.clone(), Some(i));
+            }
+        }
     }
 
     /// Gets a property defined by the current style of this element.
-    ///
-    /// Note that this may be slow if there are many styles applied to this
-    /// element. It is recommended to only check for properties when
-    /// necessary (e.g. on class changes or style updates).
-    pub fn get_property(&self, name: &str) -> Option<&PropertyValue> {
-        let origin = self.active_properties.get(name)?;
+    #[inline(always)]
+    pub fn get_property(&mut self, name: &str) -> Option<&PropertyValue> {
+        if self.el.dirty_active_properties {
+            self.update_active_properties();
+        }
+
+        let origin = self.el.active_properties.get(name)?;
         match *origin {
-            Some(i) => self.styles[i].value.get_property(name),
-            None => self.properties.get(name),
+            Some(i) => {
+                let style = &self.el.styles[i].value;
+                let scope = self.scopes.get(style.scope_id)?;
+                scope.get_property(name)
+            }
+            None => {
+                let scope = self.scopes.get(self.el.scope)?;
+                scope.get_property(name)
+            }
         }
     }
 
     /// Attempts to get a property and automatically convert it to the desired
     /// type. If the property is not found, returns the default value for the
     /// type.
-    pub fn get_as<'a, O>(&'a self, name: &str) -> Option<O>
+    #[inline(always)]
+    pub fn get_as<'b, O>(&'b mut self, name: &str) -> Option<O>
     where
-        O: From<&'a PropertyValue> + Default,
+        O: From<&'b PropertyValue> + Default,
     {
         self.get_property(name).map(Into::into)
     }
 
     /// Attempts to get a property and automatically convert it to the desired
     /// type. If the property is not found, returns the provided default value.
-    pub fn get_as_or<'a, O>(&'a self, name: &str, def: O) -> O
+    #[inline(always)]
+    pub fn get_as_or<'b, O>(&'b mut self, name: &str, def: O) -> O
     where
-        O: From<&'a PropertyValue>,
+        O: From<&'b PropertyValue>,
     {
         self.get_property(name).map(Into::into).unwrap_or(def)
     }
 }
 
+/// Builds an element tree.
+pub(super) fn build_tree(
+    global_scope: ScopeId,
+    scopes: &mut ScopeTree,
+    styles: &[Style],
+    widgets: &HashMap<String, Widget>,
+    layout: Layout,
+) -> NekoResult<NekoElementBuilder> {
+    build_element(global_scope, scopes, styles, widgets, layout, None)
+}
+
 /// Builds a [`NekoElementBuilder`] from the given styles and layout.
 pub(super) fn build_element(
-    variables: &HashMap<String, UnresolvedPropertyValue>,
+    parent_scope: ScopeId,
+    scopes: &mut ScopeTree,
     styles: &[Style],
     widgets: &HashMap<String, Widget>,
     layout: Layout,
@@ -256,11 +266,16 @@ pub(super) fn build_element(
                 None => ClassPath::new(classes),
             };
 
+            let scope = scopes.create(Some(parent_scope));
+            scope.add_properties(layout.properties.iter());
+            let scope_id = scope.id();
+
             let mut children = Vec::new();
             if let Some(c) = layout.children_slots.get("default") {
                 for child in c {
                     children.push(build_element(
-                        variables,
+                        scope_id,
+                        scopes,
                         styles,
                         widgets,
                         child.clone(),
@@ -269,10 +284,12 @@ pub(super) fn build_element(
                 }
             }
 
-            let mut element = NekoElement::new(classpath, variables.clone(), layout.properties);
+            let mut element = NekoElement::new(classpath, scope_id);
             for style in styles {
                 element.try_add_style(style);
             }
+            element.view_mut(scopes).update_active_properties();
+            println!("element {} with properties {}", widget.name(), element.active_properties().cloned().collect::<Vec<_>>().join(", "));
 
             Ok(NekoElementBuilder {
                 element,
@@ -281,20 +298,21 @@ pub(super) fn build_element(
             })
         }
         Widget::Custom(custom_widget) => {
-            let mut local_variables = variables.clone();
-
-            for (name, value) in &custom_widget.default_properties {
-                local_variables.insert(name.clone(), value.clone());
-            }
-
-            for (name, value) in &layout.properties {
-                local_variables.insert(name.clone(), value.clone());
-            }
+            let widget_scope = scopes.create(Some(parent_scope));
+            widget_scope.add_variables(custom_widget.default_properties.iter());
+            widget_scope.add_variables(layout.properties.iter());
 
             let mut widget_layout = custom_widget.layout.clone();
             substitute_widget_slots(&mut widget_layout, layout.children_slots);
 
-            build_element(&local_variables, styles, widgets, widget_layout, classpath)
+            build_element(
+                widget_scope.id(),
+                scopes,
+                styles,
+                widgets,
+                widget_layout,
+                classpath,
+            )
         }
     }
 }

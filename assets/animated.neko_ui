@@ -1,0 +1,108 @@
+var random-color = #ffffff;
+var random-num = 20;
+
+var paddings = 5;
+
+style p {
+    color: #000000;
+}
+
+style p +bouncy-text {
+    font-size: $random-num;
+}
+
+style div +rainbow {
+    background-color: $random-color;
+}
+
+
+def inner {
+    layout div {
+        class rainbow;
+        padding: $paddings;
+        output;
+    }
+}
+
+def outer {
+    layout div {
+        padding: $paddings;
+        // class rainbow;
+        background-color: $random-color;
+
+        with inner {
+            output;
+        }
+    }
+}
+
+
+def item {
+    layout outer {
+        with p {
+            class bouncy-text;
+            text: "Hi!";
+        }
+        output;
+    }
+}
+
+def row {
+    layout div {
+        flex-direction: row;
+        column-gap: 5;
+
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+        with item {}
+
+        output;
+    }
+}
+
+layout div {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+    row-gap: 5;
+
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+}

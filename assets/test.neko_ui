@@ -1,0 +1,52 @@
+var p = 20;
+var text-color = #000000;
+var text-size = 20;
+
+style p {
+    color: $text-color;
+    font-size: $text-size;
+}
+
+
+def inner {
+    var color = #aaaaaa;
+
+    layout div {
+        padding: $p;
+        background-color: $color;
+
+        output;
+    }
+}
+
+def outer {
+    var outer_color = #aaaaaa;
+    var inner_color = #aaaaaa;
+
+    var color = $outer_color;
+
+    layout div {
+        padding: $p;
+        background-color: $color;
+
+        with inner {
+            color: $inner_color;
+
+            output;
+        }
+    }
+}
+
+layout div {
+    align-items: start;
+    padding: $p;
+
+    with outer {
+        outer_color: #ffaaaa;
+        inner_color: #aaffaa;
+
+        with p {
+            text: "Hi!";
+        }
+    }
+}
