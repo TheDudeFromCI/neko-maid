@@ -244,6 +244,6 @@ pub fn update_animation(
 
     let n = 20.0 + f64::sin(time.elapsed_secs_f64() * 5.0) * 5.0;
     for mut font in fonts {
-        font.font_size = n as f32;
+        font.font_size = ( (n * 20.0).round() / 20.0 ) as f32;
     }
 }

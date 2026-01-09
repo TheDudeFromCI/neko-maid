@@ -174,10 +174,11 @@ pub fn update_animation(
     let h = (time.elapsed_secs_f64() % 4.0) / 4.0 * 360.0;
     let color = Color::hsl(h as f32, 0.5, 0.3);
 
-    let width = 20.0 + f64::sin(time.elapsed_secs_f64() * 5.0) * 5.0;
+    let num = 20.0 + f64::sin(time.elapsed_secs_f64() * 5.0) * 5.0;
+    let num = (num * 20.0).round() / 20.0;
 
     for mut root in &mut q {
         root.set_variable("random-color", PropertyValue::Color(color));
-        root.set_variable("random-num", PropertyValue::Number(width));
+        root.set_variable("random-num", PropertyValue::Number(num));
     }
 }
