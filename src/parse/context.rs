@@ -7,18 +7,19 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::parse::NekoMaidParseError;
-use crate::parse::element::{NekoElementBuilder, build_element};
+use crate::parse::element::{NekoElementBuilder, build_tree};
 use crate::parse::layout::Layout;
 use crate::parse::module::Module;
 use crate::parse::property::UnresolvedPropertyValue;
+use crate::parse::scope::{Scope, ScopeId, ScopeTree};
 use crate::parse::style::Style;
 use crate::parse::token::{Token, TokenPosition, TokenType, TokenValue};
 use crate::parse::widget::Widget;
 
 /// Context for parsing NekoMaid UI files.
 pub(crate) struct ParseContext {
-    /// A map of defined variables and their values.
-    variables: HashMap<String, UnresolvedPropertyValue>,
+    /// The scope tree for this parse context.
+    scope_tree: ScopeTree,
 
     /// A list of defined styles.
     styles: Vec<Style>,
@@ -48,8 +49,12 @@ impl ParseContext {
     /// A file retriever function can be provided to enable importing of
     /// external NekoMaid UI modules.
     pub(crate) fn new(tokens: Vec<Token>) -> Self {
+        // create global scope
+        let mut scope = ScopeTree::default();
+        scope.create(None);
+
         Self {
-            variables: HashMap::new(),
+            scope_tree: scope,
             styles: Vec::new(),
             layouts: Vec::new(),
             widgets: HashMap::new(),
@@ -129,22 +134,40 @@ impl ParseContext {
 
     /// Sets the value of a defined variable. If the variable already exists,
     /// its value is updated.
-    pub(crate) fn set_variable(&mut self, name: String, value: UnresolvedPropertyValue) {
-        self.variables.insert(name, value);
+    pub(crate) fn set_variable(&mut self, name: &String, value: &UnresolvedPropertyValue) {
+        let Some(scope) = self.scope_tree.get_mut(ScopeId(0)) else {
+            return;
+        };
+        scope.add_variables([(name, value)]);
+    }
+
+    /// Creates and returns a scope that is child of the provided scope.
+    pub(crate) fn create_scope(&mut self, parent: ScopeId) -> &mut Scope {
+        self.scope_tree.create(Some(parent))
     }
 
     /// Converts this parse context into a [`Module`].
     pub(crate) fn into_module(self) -> NekoResult<Module> {
         let mut elements = self.imported_elements;
 
-        let variables = HashMap::new();
+        let global_scope_id = ScopeId(0);
+        let mut scope_tree = self.scope_tree;
+
         for layout in self.layouts {
-            let element = build_element(&variables, &self.styles, &self.widgets, layout, None)?;
+            let element = build_tree(
+                global_scope_id,
+                &mut scope_tree,
+                &self.styles,
+                &self.widgets,
+                layout,
+            )?;
             elements.push(element);
         }
 
+        scope_tree.update_dependency_graph();
+
         Ok(Module {
-            variables: self.variables,
+            scope: scope_tree,
             styles: self.styles,
             widgets: self.widgets,
             elements,
@@ -174,7 +197,13 @@ impl ParseContext {
     pub(crate) fn add_style(&mut self, style: Style) {
         for existing_style in &mut self.styles {
             if existing_style.selector() == style.selector() {
-                existing_style.merge(style);
+                let Some(scope) = self.scope_tree.get(style.scope_id).cloned() else {
+                    return;
+                };
+                let Some(existing_scope) = self.scope_tree.get_mut(style.scope_id) else {
+                    return;
+                };
+                existing_scope.merge(&scope);
                 return;
             }
         }
@@ -204,8 +233,10 @@ impl ParseContext {
             });
         };
 
-        for (var_name, var_value) in module.variables {
-            self.set_variable(var_name, var_value);
+        if let Some(global_scope) = module.scope.get(ScopeId(0)) {
+            for (var_name, var_value) in global_scope.variables() {
+                self.set_variable(var_name, var_value);
+            }
         }
 
         for style in module.styles {

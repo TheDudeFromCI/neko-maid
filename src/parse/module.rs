@@ -7,7 +7,8 @@ use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::element::NekoElementBuilder;
 use crate::parse::import::parse_import;
 use crate::parse::layout::parse_layout;
-use crate::parse::property::{UnresolvedPropertyValue, parse_variable};
+use crate::parse::property::parse_variable;
+use crate::parse::scope::ScopeTree;
 use crate::parse::style::{Selector, Style, parse_style};
 use crate::parse::token::TokenType;
 use crate::parse::widget::{Widget, parse_widget};
@@ -15,8 +16,8 @@ use crate::parse::widget::{Widget, parse_widget};
 /// A NekoMaid UI module.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    /// A map of defined variables and their values.
-    pub(crate) variables: HashMap<String, UnresolvedPropertyValue>,
+    /// The scope tree for this module.
+    pub(crate) scope: ScopeTree,
 
     /// A list of defined styles.
     ///
@@ -37,7 +38,7 @@ pub(super) fn parse_module(mut ctx: ParseContext) -> NekoResult<Module> {
             TokenType::ImportKeyword => parse_import(&mut ctx)?,
             TokenType::VarKeyword => {
                 let variable = parse_variable(&mut ctx)?;
-                ctx.set_variable(variable.name, variable.value);
+                ctx.set_variable(&variable.name, &variable.value);
             }
             TokenType::DefKeyword => {
                 let widget = parse_widget(&mut ctx)?;

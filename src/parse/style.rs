@@ -1,13 +1,13 @@
 //! A parser for NekoMaid UI style definitions.
 
-use bevy::platform::collections::{HashMap, HashSet};
+use bevy::platform::collections::HashSet;
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::context::{NekoResult, ParseContext};
 use crate::parse::layout::Layout;
-use crate::parse::property::{UnresolvedPropertyValue, parse_unresolved_property};
+use crate::parse::property::parse_unresolved_property;
+use crate::parse::scope::ScopeId;
 use crate::parse::token::TokenType;
-use crate::parse::value::PropertyValue;
 use crate::parse::widget::Widget;
 
 /// A NekoMaid UI style definition.
@@ -16,62 +16,19 @@ pub struct Style {
     /// The selector for the style.
     pub(crate) selector: Selector,
 
-    /// The unresolved properties defined in the style.
-    pub(crate) unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
-
-    /// The properties defined in the style.
-    pub(crate) properties: HashMap<String, PropertyValue>,
+    /// The id of the scope containing the properties of this style.
+    pub(crate) scope_id: ScopeId,
 }
 
 impl Style {
     /// Creates a new Style with the given selector and properties.
-    pub(crate) fn new(
-        selector: Selector,
-        unresolved_properties: HashMap<String, UnresolvedPropertyValue>,
-    ) -> Self {
-        Self {
-            selector,
-            unresolved_properties,
-            properties: HashMap::new(),
-        }
-    }
-
-    /// Returns a reference to the selector of this style.
-    pub fn get_property(&self, name: &str) -> Option<&PropertyValue> {
-        self.properties.get(name)
-    }
-
-    /// Sets a property in this style.
-    pub fn set_property(&mut self, name: String, value: PropertyValue) {
-        self.properties.insert(name, value);
+    pub(crate) fn new(selector: Selector, scope_id: ScopeId) -> Self {
+        Self { selector, scope_id }
     }
 
     /// Returns a reference to the selector of this style.
     pub fn selector(&self) -> &Selector {
         &self.selector
-    }
-
-    /// Returns a reference to the properties of this style.
-    pub fn properties(&self) -> &HashMap<String, PropertyValue> {
-        &self.properties
-    }
-
-    /// Resolve properties of this style.
-    pub fn resolve(&mut self, variables: &HashMap<String, PropertyValue>) -> NekoResult<()> {
-        for (name, value) in &self.unresolved_properties {
-            let prop = value.resolve(variables)?;
-            self.properties.insert(name.clone(), prop);
-        }
-
-        Ok(())
-    }
-
-    /// Merges another style into this one, overriding existing properties, and
-    /// adding new ones.
-    pub fn merge(&mut self, other: Style) {
-        for (key, value) in other.properties {
-            self.properties.insert(key, value);
-        }
     }
 }
 
@@ -132,13 +89,13 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
 
     ctx.expect(TokenType::OpenBrace)?;
 
-    let mut properties = HashMap::new();
+    let mut properties = vec![];
 
     while let Some(next) = ctx.peek() {
         match next.token_type {
             TokenType::Identifier => {
                 let property = parse_unresolved_property(ctx)?;
-                properties.insert(property.name, property.value);
+                properties.push((property.name, property.value));
             }
             TokenType::WithKeyword => {
                 parse_style(ctx, selector.clone())?;
@@ -161,7 +118,10 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
     ctx.expect(TokenType::CloseBrace)?;
 
     if !properties.is_empty() {
-        ctx.add_style(Style::new(selector, properties));
+        let scope = ctx.create_scope(ScopeId(0));
+        scope.add_properties(properties.iter().map(|(k, v)| (k, v)));
+        let scope_id = scope.id();
+        ctx.add_style(Style::new(selector, scope_id));
     }
 
     Ok(())

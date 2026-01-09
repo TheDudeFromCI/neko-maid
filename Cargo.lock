@@ -3129,6 +3129,7 @@ dependencies = [
  "lazy_static",
  "neko_derive",
  "pretty_assertions",
+ "rand",
  "regex",
  "thiserror 2.0.17",
 ]

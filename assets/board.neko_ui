@@ -1,0 +1,133 @@
+var cell-size = 20;
+var gap = 1;
+
+style div +box {
+    background-color: #cccccc;
+}
+style div +box +hovered {
+    background-color: #999999;
+}
+style div +box +pressed {
+    background-color: #666666;
+}
+
+style div +box +active {
+    background-color: #181818ff;
+}
+style div +box +active +hovered {
+    background-color: #464646ff;
+}
+style div +box +active +pressed {
+    background-color: #5c5c5cff;
+}
+
+def cell {
+    layout div {
+        class interactable;
+        class box;
+        width: $cell-size;
+        height: $cell-size;
+
+        output;
+    }
+}
+
+def row {
+    layout div {
+        flex-direction: row;
+        column-gap: $gap;
+
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+        with cell {}
+
+        output;
+    }
+}
+
+layout div {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+    row-gap: $gap;
+
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+    with row {}
+}

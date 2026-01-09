@@ -1,6 +1,5 @@
 use bevy::color::palettes::css::RED;
 use bevy::prelude::*;
-use neko_derive::NekoMarker;
 use neko_maid::components::NekoUITree;
 use neko_maid::marker::{MarkerAppExt, NekoMarker};
 

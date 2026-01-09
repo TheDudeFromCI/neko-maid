@@ -15,6 +15,7 @@ pub mod import;
 pub mod layout;
 pub mod module;
 pub mod property;
+pub mod scope;
 pub mod style;
 pub mod token;
 pub mod tokenizer;

@@ -1,0 +1,129 @@
+// global variables that are controlled dynamically.
+var width = 500;
+var color = #000000;
+
+var text-color = #614a31;
+
+style div +outer-menu {
+  background-color: #D5A96E;
+  border-color: #5B4A31;
+  border-thickness: 4px;
+  border-radius: 12px;
+}
+
+style div +inner-menu {
+  background-color: #d9ad72;
+  border-color: #c1935b;
+  border-thickness: 4px;
+  border-radius: 12px;
+}
+
+style p {
+  color: #000000;
+}
+
+style p +h1 {
+  font-size: 32;
+  color: $color;
+}
+
+def h1 {
+  var text = "Text";
+
+  layout div {
+    flex-direction: column;
+
+    with p {
+      class h1;
+      text: $text;
+    }
+
+    with div {
+      height: 2px;
+      width: 100%;
+
+      background-color: #614a31;
+      border-radius: 4px;
+    }
+
+    output;
+  }
+}
+
+
+style div +button {
+  background-color: #ab691fff;
+}
+
+style div +button +hovered {
+  background-color: #945710ff;
+}
+
+style div +button +pressed {
+  background-color: #8f7a65ff;
+}
+
+def button {
+  var text = "Click Me";
+
+  layout div {
+    class interactable;
+    class button;
+
+    padding: 10;
+    border-radius: 2;
+
+    with p {
+      text: $text;
+      color: #ffffff;
+    }
+
+    output;
+  }
+}
+
+
+layout div {
+  class outer-menu;
+
+  flex-direction: column;
+  align-items: center;
+
+  width: $width;
+  height: 250px;
+
+  margin: auto;
+  padding: 8px;
+  row-gap: 8px;
+
+  with h1 {
+    text: "Message";
+  }
+
+  with div {
+    class inner-menu;
+
+    flex-grow: 1;
+    flex-direction: column;
+    width: 100%;
+    padding: 8px;
+    justify-content: space-between;
+
+    with div {
+      flex-direction: column;
+
+      with p {
+        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec pharetra malesuada tortor, sit amet consequat libero posuere ac.";
+      }
+    }
+
+    with div {
+      padding: 5;
+      column-gap: 10;
+      justify-content: end;
+
+      with button { text: "Yes"; }
+      with button { text: "No"; }
+    }
+  }
+}
