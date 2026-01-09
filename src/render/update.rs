@@ -1,18 +1,11 @@
 //! A module that defines the node update logic.
 
+use bevy::image::TRANSPARENT_IMAGE_HANDLE;
 use bevy::prelude::*;
 
 use crate::parse::element::NekoElementView;
 use crate::parse::value::PropertyValue;
 
-macro_rules! d {
-    ($expr:expr) => {
-        match $expr {
-            Some(v) => v,
-            None => Default::default(),
-        }
-    };
-}
 
 /// Partially updates the given components based on the current computed
 /// properties.
@@ -40,40 +33,40 @@ pub fn update_node<'a>(
             // --- node ---
 
             // basic layout
-            "display" => node.display = d!(element.get_as("display")),
-            "box-sizing" => node.box_sizing = d!(element.get_as("box-sizing")),
-            "position-type" => node.position_type = d!(element.get_as("position-type")),
+            "display" => node.display = element.get_as("display").unwrap_or_default(),
+            "box-sizing" => node.box_sizing = element.get_as("box-sizing").unwrap_or_default(),
+            "position-type" => node.position_type = element.get_as("position-type").unwrap_or_default(),
             // overflow
-            "overflow-x" => node.overflow.x = d!(element.get_as("overflow-x")),
-            "overflow-y" => node.overflow.y = d!(element.get_as("overflow-y")),
-            "scrollbar-width" => node.scrollbar_width = d!(element.get_as("scrollbar-width")),
+            "overflow-x" => node.overflow.x = element.get_as("overflow-x").unwrap_or_default(),
+            "overflow-y" => node.overflow.y = element.get_as("overflow-y").unwrap_or_default(),
+            "scrollbar-width" => node.scrollbar_width = element.get_as("scrollbar-width").unwrap_or_default(),
             "overflow-clip-margin-box" => {
                 node.overflow_clip_margin.visual_box =
-                    d!(element.get_as("overflow-clip-margin-box"))
+                    element.get_as("overflow-clip-margin-box").unwrap_or_default()
             }
             "overflow-clip-margin" => {
-                node.overflow_clip_margin.margin = d!(element.get_as("overflow-clip-margin"))
+                node.overflow_clip_margin.margin = element.get_as("overflow-clip-margin").unwrap_or_default()
             }
             // positioning
-            "left" => node.left = d!(element.get_as("left")),
-            "top" => node.top = d!(element.get_as("top")),
-            "right" => node.right = d!(element.get_as("right")),
-            "bottom" => node.bottom = d!(element.get_as("bottom")),
+            "left" => node.left = element.get_as("left").unwrap_or_default(),
+            "top" => node.top = element.get_as("top").unwrap_or_default(),
+            "right" => node.right = element.get_as("right").unwrap_or_default(),
+            "bottom" => node.bottom = element.get_as("bottom").unwrap_or_default(),
             // sizing
-            "width" => node.width = d!(element.get_as("width")),
-            "height" => node.height = d!(element.get_as("height")),
-            "min-width" => node.min_width = d!(element.get_as("min-width")),
-            "min-height" => node.min_height = d!(element.get_as("min-height")),
-            "max-width" => node.max_width = d!(element.get_as("max-width")),
-            "max-height" => node.max_height = d!(element.get_as("max-height")),
-            "aspect-ratio" => node.aspect_ratio = d!(element.get_as("aspect-ratio")),
+            "width" => node.width = element.get_as("width").unwrap_or_default(),
+            "height" => node.height = element.get_as("height").unwrap_or_default(),
+            "min-width" => node.min_width = element.get_as("min-width").unwrap_or_default(),
+            "min-height" => node.min_height = element.get_as("min-height").unwrap_or_default(),
+            "max-width" => node.max_width = element.get_as("max-width").unwrap_or_default(),
+            "max-height" => node.max_height = element.get_as("max-height").unwrap_or_default(),
+            "aspect-ratio" => node.aspect_ratio = element.get_as("aspect-ratio").unwrap_or_default(),
             // alignment
-            "align-items" => node.align_items = d!(element.get_as("align-items")),
-            "justify-items" => node.justify_items = d!(element.get_as("justify-items")),
-            "align-self" => node.align_self = d!(element.get_as("align-self")),
-            "justify-self" => node.justify_self = d!(element.get_as("justify-self")),
-            "align-content" => node.align_content = d!(element.get_as("align-content")),
-            "justify-content" => node.justify_content = d!(element.get_as("justify-content")),
+            "align-items" => node.align_items = element.get_as("align-items").unwrap_or_default(),
+            "justify-items" => node.justify_items = element.get_as("justify-items").unwrap_or_default(),
+            "align-self" => node.align_self = element.get_as("align-self").unwrap_or_default(),
+            "justify-self" => node.justify_self = element.get_as("justify-self").unwrap_or_default(),
+            "align-content" => node.align_content = element.get_as("align-content").unwrap_or_default(),
+            "justify-content" => node.justify_content = element.get_as("justify-content").unwrap_or_default(),
             // margin
             "margin-top" | "margin-left" | "margin-right" | "margin-bottom" | "margin" => {
                 let margin = element.get_as("margin").unwrap_or(Val::Px(0.0));
@@ -103,16 +96,16 @@ pub fn update_node<'a>(
                 node.border.bottom = element.get_as_or("border-thickness-bottom", border);
             }
             // flex
-            "flex-direction" => node.flex_direction = d!(element.get_as("flex-direction")),
-            "flex-wrap" => node.flex_wrap = d!(element.get_as("flex-wrap")),
-            "flex-grow" => node.flex_grow = d!(element.get_as("flex-grow")),
-            "flex-shrink" => node.flex_shrink = d!(element.get_as("flex-shrink")),
-            "flex-basis" => node.flex_basis = d!(element.get_as("flex-basis")),
+            "flex-direction" => node.flex_direction = element.get_as("flex-direction").unwrap_or_default(),
+            "flex-wrap" => node.flex_wrap = element.get_as("flex-wrap").unwrap_or_default(),
+            "flex-grow" => node.flex_grow = element.get_as("flex-grow").unwrap_or_default(),
+            "flex-shrink" => node.flex_shrink = element.get_as("flex-shrink").unwrap_or(1.0),
+            "flex-basis" => node.flex_basis = element.get_as("flex-basis").unwrap_or_default(),
             // gaps
-            "row-gap" => node.row_gap = d!(element.get_as("row-gap")),
-            "column-gap" => node.column_gap = d!(element.get_as("column-gap")),
+            "row-gap" => node.row_gap = element.get_as("row-gap").unwrap_or_default(),
+            "column-gap" => node.column_gap = element.get_as("column-gap").unwrap_or_default(),
             // grid
-            "grid-auto-flow" => node.grid_auto_flow = d!(element.get_as("grid-auto-flow")),
+            "grid-auto-flow" => node.grid_auto_flow = element.get_as("grid-auto-flow").unwrap_or_default(),
 
             // --- border color ---
             "border-color-top"
@@ -143,24 +136,29 @@ pub fn update_node<'a>(
             "background-color" => background_color.0 = element.get_as("background-color").unwrap_or(Color::NONE),
             "tint" => {
                 if let Some(image) = image {
-                    image.color = d!(element.get_as("tint"))
+                    image.color = element.get_as("tint").unwrap_or(Color::WHITE)
                 }
             }
 
             // --- image ---
             "src" => {
                 if let Some(image) = image {
-                    image.image = asset_server.load(d!(element.get_as::<String>("src")));
+                    image.image = if let Some(src) = element.get_as::<String>("src") {
+                        asset_server.load(src)
+                    }
+                    else {
+                        TRANSPARENT_IMAGE_HANDLE
+                    }
                 }
             }
             "flip-x" => {
                 if let Some(image) = image {
-                    image.flip_x = d!(element.get_as("flip-x"))
+                    image.flip_x = element.get_as("flip-x").unwrap_or_default()
                 }
             }
             "flip-y" => {
                 if let Some(image) = image {
-                    image.flip_y = d!(element.get_as("flip-y"))
+                    image.flip_y = element.get_as("flip-y").unwrap_or_default()
                 }
             }
             "mode"
@@ -258,15 +256,15 @@ pub fn update_node<'a>(
             // text content
             "text" => {
                 if let Some(text) = text {
-                    text.0 = d!(element.get_as("text"));
+                    text.0 = element.get_as("text").unwrap_or_default();
                 } else if let Some(span) = span {
-                    span.0 = d!(element.get_as("text"));
+                    span.0 = element.get_as("text").unwrap_or_default();
                 }
             }
             // font
             "font" => {
                 if let Some(font) = font {
-                    let font_path: String = d!(element.get_as("font"));
+                    let font_path: String = element.get_as("font").unwrap_or_default();
                     font.font = match font_path.as_str() {
                         "auto" => Handle::<Font>::default(),
                         _ => asset_server.load(font_path),
@@ -275,25 +273,25 @@ pub fn update_node<'a>(
             }
             "font-size" => {
                 if let Some(font) = font {
-                    font.font_size = d!(element.get_as("font-size"))
+                    font.font_size = element.get_as("font-size").unwrap_or(20.0)
                 }
             }
             "line-height" => {
                 if let Some(font) = font {
-                    font.line_height = d!(element.get_as("line-height"))
+                    font.line_height = element.get_as("line-height").unwrap_or_default()
                 }
             }
             "font-smoothing" => {
                 if let Some(font) = font {
-                    font.font_smoothing = d!(element.get_as("font-smoothing"))
+                    font.font_smoothing = element.get_as("font-smoothing").unwrap_or_default()
                 }
             }
             // layout (Text only
             "justify" | "line-break" => {
                 if let Some(layout) = layout {
                     match property.as_str() {
-                        "justify" => layout.justify = d!(element.get_as("justify")),
-                        "line-break" => layout.linebreak = d!(element.get_as("line-break")),
+                        "justify" => layout.justify = element.get_as("justify").unwrap_or_default(),
+                        "line-break" => layout.linebreak = element.get_as("line-break").unwrap_or_default(),
                         _ => {}
                     }
                 }
@@ -301,7 +299,7 @@ pub fn update_node<'a>(
             // color
             "color" => {
                 if let Some(color) = color {
-                    color.0 = d!(element.get_as("color"))
+                    color.0 = element.get_as("color").unwrap_or(Color::WHITE)
                 }
             }
 

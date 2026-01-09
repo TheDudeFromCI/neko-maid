@@ -66,7 +66,7 @@ impl NekoMarker for Interaction {
 }
 
 
-/// The marker factory.
+/// The marker insert/remove function.
 pub type MarkerFunction = Box<dyn Fn(&mut EntityCommands) + Send + Sync>;
 
 /// A resource for managing registered marker types.
@@ -79,7 +79,22 @@ pub struct MarkerRegistry {
 }
 
 impl MarkerRegistry {
-    /// Inserts the marker component to an entity given its element.
+    /// Registers the specified marker component.
+    pub fn add_marker<T: NekoMarker + Bundle>(&mut self) {
+        self.inserters.entry(T::id().to_owned()).or_default().push(
+            Box::new(|entity| {
+                entity.insert(T::new());
+            }),
+        );
+        self.removers.entry(T::id().to_owned()).or_default().push(
+            Box::new(|entity| {
+                entity.remove::<T>();
+            }),
+        );
+
+    }
+
+    /// Inserts the associated class marker components to the node entity.
     pub fn insert(&self, mut entity: EntityCommands, class: &str) {
         let Some(inserters) = self.inserters.get(class) else {
             return
@@ -89,7 +104,7 @@ impl MarkerRegistry {
         }
     }
 
-    /// Inserts the marker component to an entity given its element.
+    /// Removes the associated class marker components from the node entity.
     pub fn remove(&self, mut entity: EntityCommands, class: &str) {
         let Some(removers) = self.removers.get(class) else {
             return
@@ -112,21 +127,10 @@ pub trait MarkerAppExt {
 
 impl MarkerAppExt for App {
     fn add_marker<T: NekoMarker + Bundle>(&mut self) -> &mut Self {
-        let mut res = self.init_resource::<MarkerRegistry>()
+        self.init_resource::<MarkerRegistry>()
             .world_mut()
-            .resource_mut::<MarkerRegistry>();
-
-        res.inserters.entry(T::id().to_owned()).or_default().push(
-            Box::new(|entity| {
-                entity.insert(T::new());
-            }),
-        );
-        res.removers.entry(T::id().to_owned()).or_default().push(
-            Box::new(|entity| {
-                entity.remove::<T>();
-            }),
-        );
-
+            .resource_mut::<MarkerRegistry>()
+            .add_marker::<T>();
         self
     }
 }

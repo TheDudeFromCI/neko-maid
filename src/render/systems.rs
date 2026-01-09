@@ -7,10 +7,10 @@ use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use crate::asset::NekoMaidUI;
-use crate::components::{NekoUINode, NekoUITree, ScopeNotificationMap};
+use crate::components::{NekoUINode, NekoUITree};
 use crate::marker::MarkerRegistry;
 use crate::parse::element::NekoElementBuilder;
-use crate::parse::scope::ScopeId;
+use crate::parse::scope::{ScopeId, ScopeNotificationMap};
 use crate::render::update::update_node;
 
 
@@ -90,11 +90,6 @@ fn spawn_element(
 
     scope_notification.register(element.element.scope_id(), entity);
 
-    // FIX this actually should be executed every time there is a class update
-    for style in element.element.active_styles() {
-        scope_notification.register(style.scope_id, entity);
-    }
-
     commands.entity(entity).insert((NekoUINode {
         root,
         element: element.element.clone(),
@@ -107,14 +102,13 @@ fn spawn_element(
 }
 
 
-/// Handle interactions one interactable elements.
+/// Handle interactions on interactable elements.
 pub fn handle_interactions(
     nodes: Query<(&mut NekoUINode, &Interaction), Changed<Interaction>>,
 ) {
     for (mut node, interaction) in nodes {        
         match interaction {
             Interaction::Pressed => {
-                node.element.remove_class("hovered");
                 node.element.add_class("pressed".to_string());
             },
             Interaction::Hovered => {
@@ -181,12 +175,11 @@ pub fn handle_class_changes(
         while let Some((child, i)) = entities.pop() {
             let Ok((mut node, children)) = nodes.get_mut(child) else { continue };
 
+            let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
             for class in &added_classes {
-                let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
                 set.classes.insert(class.clone());
             }
             for class in &removed_classes {
-                let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
                 set.classes.remove(class);
             }
 
@@ -242,7 +235,7 @@ pub fn update_styles(
 
         for scope_id in &updates {
             let Some(scope) = root.scope.get(*scope_id) else { continue };
-            for name in scope.properties() {
+            for name in scope.property_names() {
                 node.updated_properties.push(name.clone());
             }
         }

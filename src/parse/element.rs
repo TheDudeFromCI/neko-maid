@@ -1,6 +1,5 @@
 //! A module for parsing and representing NekoMaid UI finalized elements.
 
-use bevy::ecs::component::Component;
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::{Deref, DerefMut};
 
@@ -36,8 +35,8 @@ pub(crate) struct StyleEntry {
     pub active: bool,
 }
 
-/// A component representing a NekoMaid UI element.
-#[derive(Debug, Component, Clone, PartialEq)]
+/// A NekoMaid UI element.
+#[derive(Debug, Clone, PartialEq)]
 pub struct NekoElement {
     /// The class path of this element.
     classpath: ClassPath,
@@ -151,10 +150,12 @@ impl NekoElement {
                 value: style.clone(),
                 active,
             };
+            let i = self.styles.len();
             self.styles.push(entry);
 
             if active {
                 self.dirty_active_properties = true;
+                self.activated_styles.push(i);
             }
         }
     }
@@ -196,7 +197,7 @@ impl<'a> NekoElementView<'a> {
         let Some(scope) = self.scopes.get(self.scope) else {
             return;
         };
-        for name in scope.properties() {
+        for name in scope.property_names() {
             self.el.active_properties.insert(name.clone(), None);
         }
 
@@ -212,7 +213,7 @@ impl<'a> NekoElementView<'a> {
     fn update_style_properties(&mut self, i: usize) {
         let style = &self.styles[i].value;
         let Some(scope) = self.scopes.get(style.scope_id) else { return };
-        for name in scope.properties() {
+        for name in scope.property_names() {
             let j = match self.active_properties.get(name) {
                 Some(j) => j.unwrap_or(usize::MAX),
                 None => 0,
@@ -333,8 +334,6 @@ pub(super) fn build_element(
                     )?);
                 }
             }
-
-            // println!("element {} with properties {}", widget.name(), element.active_properties().cloned().collect::<Vec<_>>().join(", "));
 
             Ok(NekoElementBuilder {
                 element,

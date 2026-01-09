@@ -2,11 +2,10 @@
 
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
-use lazy_static::lazy_static;
 
 use crate::asset::NekoMaidUI;
 use crate::parse::element::NekoElement;
-use crate::parse::scope::{ScopeId, ScopeName, ScopeTree};
+use crate::parse::scope::{ScopeId, ScopeName, ScopeNotificationMap, ScopeTree};
 use crate::parse::value::PropertyValue;
 
 /// A component representing a node of a NekoMaid UI tree.
@@ -47,34 +46,6 @@ impl NekoUINode {
     }
 }
 
-
-
-lazy_static! {
-    static ref EMPTY_SET: HashSet<Entity> = HashSet::new();
-}
-
-/// 
-#[derive(Debug, Deref, DerefMut, Default)]
-pub(crate) struct ScopeNotificationMap {
-    #[deref]
-    map: HashMap<ScopeId, HashSet<Entity>>
-}
-impl ScopeNotificationMap {
-    /// Register a node entity as listener to the scope specified.
-    pub fn register(&mut self, scope: ScopeId, entity: Entity) {
-        self.map.entry(scope).or_default().insert(entity);
-    }
-
-    /// Removes a node entity from the list of listeners of the scope specified.
-    pub fn remove(&mut self, scope: ScopeId, entity: Entity) {
-        self.map.entry(scope).or_default().remove(&entity);
-    }
-
-    /// Returns an iterator of node entities that listen to changes in the given scope.
-    pub fn get(&self, scope: ScopeId) -> impl Iterator<Item=Entity> {
-        self.map.get(&scope).unwrap_or(&EMPTY_SET).iter().cloned()
-    }
-}
 
 /// A component representing the root of a NekoMaid UI tree.
 #[derive(Debug, Component)]
