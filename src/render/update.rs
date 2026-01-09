@@ -140,7 +140,7 @@ pub fn update_node<'a>(
                 border_radius.bottom_right = element.get_as_or("border-radius-bottom-right", radius)
             }
             // --- background color ---
-            "background-color" => background_color.0 = d!(element.get_as("background-color")),
+            "background-color" => background_color.0 = element.get_as("background-color").unwrap_or(Color::NONE),
             "tint" => {
                 if let Some(image) = image {
                     image.color = d!(element.get_as("tint"))

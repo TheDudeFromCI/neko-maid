@@ -2,7 +2,7 @@
 
 use bevy::ecs::component::Component;
 use bevy::platform::collections::{HashMap, HashSet};
-use bevy::prelude::Deref;
+use bevy::prelude::{Deref, DerefMut};
 
 use crate::parse::NekoMaidParseError;
 use crate::parse::class::{ClassPath, ClassSet};
@@ -29,11 +29,11 @@ pub(crate) struct NekoElementBuilder {
 
 /// A style entry in an element.
 #[derive(Debug, Clone, PartialEq)]
-pub struct StyleEntry {
+pub(crate) struct StyleEntry {
     /// The style.
-    value: Style,
+    pub value: Style,
     /// Whether the current style is active i.e matches the current class path.
-    active: bool,
+    pub active: bool,
 }
 
 /// A component representing a NekoMaid UI element.
@@ -41,9 +41,14 @@ pub struct StyleEntry {
 pub struct NekoElement {
     /// The class path of this element.
     classpath: ClassPath,
+    pub(crate) classpath_changed: bool,
+    pub(crate) added_classes: Vec<String>,
+    pub(crate) removed_classes: Vec<String>,
 
     /// The styles applied to this element.
-    styles: Vec<StyleEntry>,
+    pub(crate) styles: Vec<StyleEntry>,
+    pub(crate) activated_styles: Vec<usize>,
+    pub(crate) deactivated_styles: Vec<usize>,
 
     /// A map that tells where a property applied to this
     /// element comes from. If `Some(i)`, the property
@@ -62,7 +67,12 @@ impl NekoElement {
     pub(crate) fn new(classpath: ClassPath, scope_id: ScopeId) -> Self {
         Self {
             classpath,
+            classpath_changed: true,
+            added_classes: Vec::new(),
+            removed_classes: Vec::new(),
             styles: Vec::new(),
+            activated_styles: Vec::new(),
+            deactivated_styles: Vec::new(),
             active_properties: HashMap::new(),
             dirty_active_properties: false,
             scope: scope_id,
@@ -76,6 +86,7 @@ impl NekoElement {
 
     /// Returns a mutable reference to the class path of this element.
     pub fn classpath_mut(&mut self) -> &mut ClassPath {
+        self.classpath_changed = true;
         &mut self.classpath
     }
 
@@ -86,12 +97,39 @@ impl NekoElement {
 
     /// Adds a class to the class path of this element.
     pub fn add_class(&mut self, class: String) {
-        if self.classpath.last_mut().classes.insert(class) {}
+        if self.classpath.last_mut().classes.insert(class.clone()) {
+            self.classpath_changed = true;
+            self.added_classes.push(class)
+        }
+        
     }
 
     /// Removes a class from the class path of this element.
     pub fn remove_class(&mut self, class: &str) {
-        self.classpath.last_mut().classes.remove(class);
+        if self.classpath.last_mut().classes.remove(class) {
+            self.classpath_changed = true;
+            self.removed_classes.push(class.to_string())
+        }
+    }
+
+    /// Updates the list of active styles.
+    pub fn update_active_styles(&mut self) {
+        for (i, style) in self.styles.iter_mut().enumerate() {
+            let active = self.classpath.matches(style.value.selector());
+
+            if style.active != active {
+                style.active = active;
+                self.dirty_active_properties = true;
+
+                if active {
+                    self.activated_styles.push(i);
+                }
+                else {
+                    self.deactivated_styles.push(i);
+                }
+            }
+        }
+        self.classpath_changed = false;
     }
 
     /// Returns a reference to the styles applied to this element.
@@ -139,7 +177,7 @@ impl NekoElement {
 }
 
 /// A view on the element's properties given scope context.
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, DerefMut)]
 pub struct NekoElementView<'a> {
     #[deref]
     el: &'a mut NekoElement,
@@ -149,29 +187,33 @@ pub struct NekoElementView<'a> {
 impl<'a> NekoElementView<'a> {
     /// Updates the list of all properties applied to this element.
     pub fn update_active_properties(&mut self) {
-        self.el.active_properties.clear();
+        if self.classpath_changed {
+            self.update_active_styles();
+        }
 
-        let Some(scope) = self.scopes.get(self.el.scope) else {
+        self.active_properties.clear();
+
+        let Some(scope) = self.scopes.get(self.scope) else {
             return;
         };
         for name in scope.properties() {
             self.el.active_properties.insert(name.clone(), None);
         }
 
-        for i in (0 .. self.el.styles.len()).rev() {
-            if !self.el.styles[i].active {
+        for i in (0 .. self.styles.len()).rev() {
+            if !self.styles[i].active {
                 continue;
             }
             self.update_style_properties(i);
         }
 
-        self.el.dirty_active_properties = false;
+        self.dirty_active_properties = false;
     }
     fn update_style_properties(&mut self, i: usize) {
-        let style = &self.el.styles[i].value;
+        let style = &self.styles[i].value;
         let Some(scope) = self.scopes.get(style.scope_id) else { return };
         for name in scope.properties() {
-            let j = match self.el.active_properties.get(name) {
+            let j = match self.active_properties.get(name) {
                 Some(j) => j.unwrap_or(usize::MAX),
                 None => 0,
             };
@@ -184,19 +226,19 @@ impl<'a> NekoElementView<'a> {
     /// Gets a property defined by the current style of this element.
     #[inline(always)]
     pub fn get_property(&mut self, name: &str) -> Option<&PropertyValue> {
-        if self.el.dirty_active_properties {
+        if self.dirty_active_properties {
             self.update_active_properties();
         }
 
-        let origin = self.el.active_properties.get(name)?;
+        let origin = self.active_properties.get(name)?;
         match *origin {
             Some(i) => {
-                let style = &self.el.styles[i].value;
+                let style = &self.styles[i].value;
                 let scope = self.scopes.get(style.scope_id)?;
                 scope.get_property(name)
             }
             None => {
-                let scope = self.scopes.get(self.el.scope)?;
+                let scope = self.scopes.get(self.scope)?;
                 scope.get_property(name)
             }
         }
@@ -255,9 +297,8 @@ pub(super) fn build_element(
         Widget::Native(native_widget) => {
             let classes = ClassSet {
                 widget: layout.widget,
-                classes: layout.classes,
+                classes: HashSet::new(),
             };
-
             let classpath = match classpath {
                 Some(mut path) => {
                     path.append(classes);
@@ -270,6 +311,15 @@ pub(super) fn build_element(
             scope.add_properties(layout.properties.iter());
             let scope_id = scope.id();
 
+            let mut element = NekoElement::new(classpath, scope_id);
+            for class in layout.classes {
+                element.add_class(class);
+            }
+            for style in styles {
+                element.try_add_style(style);
+            }
+            element.view_mut(scopes).update_active_properties();
+
             let mut children = Vec::new();
             if let Some(c) = layout.children_slots.get("default") {
                 for child in c {
@@ -279,17 +329,12 @@ pub(super) fn build_element(
                         styles,
                         widgets,
                         child.clone(),
-                        Some(classpath.clone()),
+                        Some(element.classpath().clone()),
                     )?);
                 }
             }
 
-            let mut element = NekoElement::new(classpath, scope_id);
-            for style in styles {
-                element.try_add_style(style);
-            }
-            element.view_mut(scopes).update_active_properties();
-            println!("element {} with properties {}", widget.name(), element.active_properties().cloned().collect::<Vec<_>>().join(", "));
+            // println!("element {} with properties {}", widget.name(), element.active_properties().cloned().collect::<Vec<_>>().join(", "));
 
             Ok(NekoElementBuilder {
                 element,

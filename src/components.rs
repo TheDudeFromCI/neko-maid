@@ -13,12 +13,41 @@ use crate::parse::value::PropertyValue;
 #[derive(Component)]
 pub struct NekoUINode {
     /// The entity with the NekoUITree component.
-    pub root: Entity,
+    pub(crate) root: Entity,
     /// The element struct that this node renders.
-    pub element: NekoElement,
+    pub(crate) element: NekoElement,
     /// A list of properties that changed and need to be re-rendered.
-    pub updated_properties: Vec<String>,
+    pub(crate) updated_properties: Vec<String>,
 }
+
+impl NekoUINode {
+    /// Returns whether this element has the specified class.
+    pub fn has_class(&self, class: &str) -> bool {
+        self.element.classes().contains(class)
+    }
+
+    /// Adds the specified class to this element.
+    pub fn add_class(&mut self, class: String) {
+        self.element.add_class(class);
+    }
+
+    /// Removes the specified class from this element.
+    pub fn remove_class(&mut self, class: &str) {
+        self.element.remove_class(class);
+    }
+
+    /// Toggles the specified class in this element.
+    pub fn toggle_class(&mut self, class: &str) {
+        if self.has_class(class) {
+            self.element.remove_class(class);
+        }
+        else {
+            self.element.add_class(class.to_owned());
+        }
+    }
+}
+
+
 
 lazy_static! {
     static ref EMPTY_SET: HashSet<Entity> = HashSet::new();
@@ -34,6 +63,11 @@ impl ScopeNotificationMap {
     /// Register a node entity as listener to the scope specified.
     pub fn register(&mut self, scope: ScopeId, entity: Entity) {
         self.map.entry(scope).or_default().insert(entity);
+    }
+
+    /// Removes a node entity from the list of listeners of the scope specified.
+    pub fn remove(&mut self, scope: ScopeId, entity: Entity) {
+        self.map.entry(scope).or_default().remove(&entity);
     }
 
     /// Returns an iterator of node entities that listen to changes in the given scope.

@@ -21,13 +21,13 @@ pub(crate) fn spawn_tree(
     asset_server: Res<AssetServer>,
     assets: Res<Assets<NekoMaidUI>>,
     markers: Res<MarkerRegistry>,
-    mut roots: Query<
+    roots: Query<
         (Entity, &mut NekoUITree, &mut Node),
         Or<(Added<NekoUITree>, Changed<NekoUITree>)>,
     >,
     mut commands: Commands,
 ) {
-    for (root_entity, mut root, mut node) in roots.iter_mut() {
+    for (root_entity, mut root, mut node) in roots {
         if !root.is_dirty() {
             continue;
         }
@@ -88,7 +88,6 @@ fn spawn_element(
     let entity =
         (element.native_widget.spawn_func)(asset_server, commands, &element.element, parent);
 
-    markers.insert(commands.entity(entity), &element.element);
     scope_notification.register(element.element.scope_id(), entity);
 
     // FIX this actually should be executed every time there is a class update
@@ -107,25 +106,172 @@ fn spawn_element(
     }
 }
 
+
+/// Handle interactions one interactable elements.
+pub fn handle_interactions(
+    nodes: Query<(&mut NekoUINode, &Interaction), Changed<Interaction>>,
+) {
+    for (mut node, interaction) in nodes {        
+        match interaction {
+            Interaction::Pressed => {
+                node.element.remove_class("hovered");
+                node.element.add_class("pressed".to_string());
+            },
+            Interaction::Hovered => {
+                node.element.add_class("hovered".to_string());
+                node.element.remove_class("pressed");
+            },
+            Interaction::None => {
+                node.element.remove_class("hovered");
+                node.element.remove_class("pressed");
+            },
+        }
+    }
+}
+
+/// Removes the `hovered` and `pressed` classes from elements that
+/// are no longer interactable.
+pub fn removed_interactable(
+    event: On<Remove, Interaction>,
+    mut nodes: Query<&mut NekoUINode, With<Interaction>>,
+) {
+    let Ok(mut node) = nodes.get_mut(event.entity) else { return };
+    node.element.remove_class("hovered");
+    node.element.remove_class("pressed");
+}
+
+
+/// Update class paths and class markers.
+pub fn handle_class_changes(
+    mut commands: Commands,
+    mut set: ParamSet<(
+        Query<Entity, Changed<NekoUINode>>,
+        Query<(&mut NekoUINode, Option<&Children>)>,
+    )>,
+    markers: Res<MarkerRegistry>,
+) {
+    let changed_nodes = set.p0().iter().collect::<Vec<_>>();
+    
+    if changed_nodes.is_empty() { return }
+    
+    let t = Instant::now();
+    
+    let mut entities = vec![];
+    let mut added_classes = vec![];
+    let mut removed_classes = vec![];
+    
+    for &entity in &changed_nodes {
+        let mut nodes = set.p1();
+        let Ok((mut node, children)) = nodes.get_mut(entity) else { continue };
+        if node.element.added_classes.is_empty() && node.element.removed_classes.is_empty() { continue }
+
+        for class in &node.element.added_classes {
+            markers.insert(commands.entity(entity), class);
+        }
+        for class in &node.element.removed_classes {
+            markers.remove(commands.entity(entity), class);
+        }
+
+        added_classes.extend(node.element.added_classes.drain(..));
+        removed_classes.extend(node.element.removed_classes.drain(..));
+
+        let Some(children) = children else { continue };
+        entities.extend(children.iter().map(|e| (e, 1)));
+        
+        while let Some((child, i)) = entities.pop() {
+            let Ok((mut node, children)) = nodes.get_mut(child) else { continue };
+
+            for class in &added_classes {
+                let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
+                set.classes.insert(class.clone());
+            }
+            for class in &removed_classes {
+                let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
+                set.classes.remove(class);
+            }
+
+            if let Some(children) = children {
+                entities.extend(children.iter().map(|e| (e, i + 1)));
+            }
+        }
+    }
+
+    let elapsed = t.elapsed().as_millis();
+    debug!("Updated class paths in {elapsed} ms of {} element(s).", changed_nodes.len());
+}
+
+/// Update scope notifications on style activations/deactivations in elements.
+pub fn update_styles(
+    mut roots: Query<&mut NekoUITree>,
+    mut nodes: Query<(Entity, &mut NekoUINode), Changed<NekoUINode>>,
+) {
+    if nodes.is_empty() { return }
+
+    let t = Instant::now();
+
+    let mut updates = vec![];
+
+    for (entity, mut node) in &mut nodes {
+        if node.element.classpath_changed {
+            node.element.update_active_styles();
+        }
+        if node.element.activated_styles.is_empty() && node.element.deactivated_styles.is_empty() {
+            continue
+        }
+
+        let Ok(mut root) = roots.get_mut(node.root) else { continue };
+
+        for &i in &node.element.deactivated_styles {
+            let Some(style) = node.element.styles.get(i) else { continue };
+            let scope_id = style.value.scope_id;
+
+            root.scope_notification.remove(scope_id, entity);
+            updates.push(scope_id);
+        }
+        
+        for &i in &node.element.activated_styles {
+            let Some(style) = node.element.styles.get(i) else { continue };
+            let scope_id = style.value.scope_id;
+            
+            root.scope_notification.register(style.value.scope_id, entity);
+            updates.push(scope_id);
+        }
+
+        node.element.deactivated_styles.clear();
+        node.element.activated_styles.clear();
+
+        for scope_id in &updates {
+            let Some(scope) = root.scope.get(*scope_id) else { continue };
+            for name in scope.properties() {
+                node.updated_properties.push(name.clone());
+            }
+        }
+    }
+
+    let elapsed = t.elapsed().as_millis();
+    debug!("Updated styles in {elapsed} ms of {} element(s).", nodes.count());
+}
+
 /// Update scope of Neko UI trees.
 pub fn update_scope(
     mut roots: Query<(Entity, &mut NekoUITree), Changed<NekoUITree>>,
     mut nodes: Query<&mut NekoUINode>,
 ) {
     for (entity, root) in roots.iter_mut() {
+        if root.update_names.is_empty() {
+            continue
+        }
+
         let t = Instant::now();
 
         let root = root.into_inner();
         let scopes = &mut root.scope;
+        let update_names = &root.update_names;
 
         let Some(global_scope) = scopes.get_mut(ScopeId(0)) else {
             return;
         };
         
-        let update_names = &root.update_names;
-        if update_names.is_empty() {
-            return;
-        }
         global_scope.add_resolved_variables(root.variables.iter());
 
         let variables = {
@@ -213,6 +359,11 @@ pub(crate) fn update_nodes(
     {
         // println!("Updating properties {:?} from {entity}",
         // neko_node.updated_properties);
+        
+        if neko_node.updated_properties.is_empty() {
+            continue
+        }
+
         let NekoUINode {
             updated_properties,
             element,
