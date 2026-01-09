@@ -27,8 +27,7 @@ def inner {
 def outer {
     layout div {
         padding: $paddings;
-        // class rainbow;
-        background-color: $random-color;
+        background-color: #cccccc;
 
         with inner {
             output;
