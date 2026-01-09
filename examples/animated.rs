@@ -6,8 +6,6 @@ use bevy::prelude::*;
 use neko_maid::components::NekoUITree;
 use neko_maid::parse::value::PropertyValue;
 
-
-
 #[derive(Resource, Clone)]
 pub struct FpsSettings {
     pub startup_visibility: Visibility,
@@ -40,7 +38,9 @@ impl FpsHistory {
         self.values.push_back(value);
 
         while self.values.len() > 10 {
-            let Some(v) = self.values.pop_front() else { break };
+            let Some(v) = self.values.pop_front() else {
+                break;
+            };
             self.sum -= v;
         }
     }
@@ -88,7 +88,9 @@ fn fps_text_update_system(
     mut query: Query<&mut Text, With<FpsText>>,
 ) {
     let t = time.elapsed_secs_f64();
-    if (t - history.last_update) < 0.1 { return }
+    if (t - history.last_update) < 0.1 {
+        return;
+    }
     history.last_update = t;
 
     let fps = diagnostics
@@ -143,7 +145,6 @@ impl Plugin for FpsCounter {
     }
 }
 
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -166,11 +167,13 @@ pub fn update_animation(
     mouse: Res<ButtonInput<MouseButton>>,
     mut q: Query<&mut NekoUITree>,
 ) {
-    if mouse.pressed(MouseButton::Left) { return }
+    if mouse.pressed(MouseButton::Left) {
+        return;
+    }
 
     let h = (time.elapsed_secs_f64() % 4.0) / 4.0 * 360.0;
     let color = Color::hsl(h as f32, 0.5, 0.3);
-    
+
     let width = 20.0 + f64::sin(time.elapsed_secs_f64() * 5.0) * 5.0;
 
     for mut root in &mut q {

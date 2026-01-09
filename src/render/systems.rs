@@ -13,7 +13,6 @@ use crate::parse::element::NekoElementBuilder;
 use crate::parse::scope::{ScopeId, ScopeNotificationMap};
 use crate::render::update::update_node;
 
-
 /// Listens for changes to the [`NekoUITree`] component and spawns the UI tree
 /// accordingly.
 #[allow(clippy::type_complexity)]
@@ -97,28 +96,33 @@ fn spawn_element(
     },));
 
     for child in &element.children {
-        spawn_element(asset_server, markers, scope_notification, commands, child, entity, root);
+        spawn_element(
+            asset_server,
+            markers,
+            scope_notification,
+            commands,
+            child,
+            entity,
+            root,
+        );
     }
 }
 
-
 /// Handle interactions on interactable elements.
-pub fn handle_interactions(
-    nodes: Query<(&mut NekoUINode, &Interaction), Changed<Interaction>>,
-) {
-    for (mut node, interaction) in nodes {        
+pub fn handle_interactions(nodes: Query<(&mut NekoUINode, &Interaction), Changed<Interaction>>) {
+    for (mut node, interaction) in nodes {
         match interaction {
             Interaction::Pressed => {
                 node.element.add_class("pressed".to_string());
-            },
+            }
             Interaction::Hovered => {
                 node.element.add_class("hovered".to_string());
                 node.element.remove_class("pressed");
-            },
+            }
             Interaction::None => {
                 node.element.remove_class("hovered");
                 node.element.remove_class("pressed");
-            },
+            }
         }
     }
 }
@@ -129,11 +133,12 @@ pub fn removed_interactable(
     event: On<Remove, Interaction>,
     mut nodes: Query<&mut NekoUINode, With<Interaction>>,
 ) {
-    let Ok(mut node) = nodes.get_mut(event.entity) else { return };
+    let Ok(mut node) = nodes.get_mut(event.entity) else {
+        return;
+    };
     node.element.remove_class("hovered");
     node.element.remove_class("pressed");
 }
-
 
 /// Update class paths and class markers.
 pub fn handle_class_changes(
@@ -145,19 +150,25 @@ pub fn handle_class_changes(
     markers: Res<MarkerRegistry>,
 ) {
     let changed_nodes = set.p0().iter().collect::<Vec<_>>();
-    
-    if changed_nodes.is_empty() { return }
-    
+
+    if changed_nodes.is_empty() {
+        return;
+    }
+
     let t = Instant::now();
-    
+
     let mut entities = vec![];
     let mut added_classes = vec![];
     let mut removed_classes = vec![];
-    
+
     for &entity in &changed_nodes {
         let mut nodes = set.p1();
-        let Ok((mut node, children)) = nodes.get_mut(entity) else { continue };
-        if node.element.added_classes.is_empty() && node.element.removed_classes.is_empty() { continue }
+        let Ok((mut node, children)) = nodes.get_mut(entity) else {
+            continue;
+        };
+        if node.element.added_classes.is_empty() && node.element.removed_classes.is_empty() {
+            continue;
+        }
 
         for class in &node.element.added_classes {
             markers.insert(commands.entity(entity), class);
@@ -171,11 +182,15 @@ pub fn handle_class_changes(
 
         let Some(children) = children else { continue };
         entities.extend(children.iter().map(|e| (e, 1)));
-        
-        while let Some((child, i)) = entities.pop() {
-            let Ok((mut node, children)) = nodes.get_mut(child) else { continue };
 
-            let Some(set) = node.element.classpath_mut().get_mut(i) else { continue };
+        while let Some((child, i)) = entities.pop() {
+            let Ok((mut node, children)) = nodes.get_mut(child) else {
+                continue;
+            };
+
+            let Some(set) = node.element.classpath_mut().get_mut(i) else {
+                continue;
+            };
             for class in &added_classes {
                 set.classes.insert(class.clone());
             }
@@ -190,7 +205,10 @@ pub fn handle_class_changes(
     }
 
     let elapsed = t.elapsed().as_millis();
-    debug!("Updated class paths in {elapsed} ms of {} element(s).", changed_nodes.len());
+    debug!(
+        "Updated class paths in {elapsed} ms of {} element(s).",
+        changed_nodes.len()
+    );
 }
 
 /// Update scope notifications on style activations/deactivations in elements.
@@ -198,7 +216,9 @@ pub fn update_styles(
     mut roots: Query<&mut NekoUITree>,
     mut nodes: Query<(Entity, &mut NekoUINode), Changed<NekoUINode>>,
 ) {
-    if nodes.is_empty() { return }
+    if nodes.is_empty() {
+        return;
+    }
 
     let t = Instant::now();
 
@@ -209,24 +229,31 @@ pub fn update_styles(
             node.element.update_active_styles();
         }
         if node.element.activated_styles.is_empty() && node.element.deactivated_styles.is_empty() {
-            continue
+            continue;
         }
 
-        let Ok(mut root) = roots.get_mut(node.root) else { continue };
+        let Ok(mut root) = roots.get_mut(node.root) else {
+            continue;
+        };
 
         for &i in &node.element.deactivated_styles {
-            let Some(style) = node.element.styles.get(i) else { continue };
+            let Some(style) = node.element.styles.get(i) else {
+                continue;
+            };
             let scope_id = style.value.scope_id;
 
             root.scope_notification.remove(scope_id, entity);
             updates.push(scope_id);
         }
-        
+
         for &i in &node.element.activated_styles {
-            let Some(style) = node.element.styles.get(i) else { continue };
+            let Some(style) = node.element.styles.get(i) else {
+                continue;
+            };
             let scope_id = style.value.scope_id;
-            
-            root.scope_notification.register(style.value.scope_id, entity);
+
+            root.scope_notification
+                .register(style.value.scope_id, entity);
             updates.push(scope_id);
         }
 
@@ -234,7 +261,9 @@ pub fn update_styles(
         node.element.activated_styles.clear();
 
         for scope_id in &updates {
-            let Some(scope) = root.scope.get(*scope_id) else { continue };
+            let Some(scope) = root.scope.get(*scope_id) else {
+                continue;
+            };
             for name in scope.property_names() {
                 node.updated_properties.push(name.clone());
             }
@@ -242,7 +271,10 @@ pub fn update_styles(
     }
 
     let elapsed = t.elapsed().as_millis();
-    debug!("Updated styles in {elapsed} ms of {} element(s).", nodes.count());
+    debug!(
+        "Updated styles in {elapsed} ms of {} element(s).",
+        nodes.count()
+    );
 }
 
 /// Update scope of Neko UI trees.
@@ -252,7 +284,7 @@ pub fn update_scope(
 ) {
     for (entity, root) in roots.iter_mut() {
         if root.update_names.is_empty() {
-            continue
+            continue;
         }
 
         let t = Instant::now();
@@ -264,7 +296,7 @@ pub fn update_scope(
         let Some(global_scope) = scopes.get_mut(ScopeId(0)) else {
             return;
         };
-        
+
         global_scope.add_resolved_variables(root.variables.iter());
 
         let variables = {
@@ -297,7 +329,9 @@ pub fn update_scope(
             scopes.evaluate(name);
 
             for entity in root.scope_notification.get(name.scope_id()) {
-                let Ok(mut node) = nodes.get_mut(entity) else { continue };
+                let Ok(mut node) = nodes.get_mut(entity) else {
+                    continue;
+                };
                 node.updated_properties.push(name.name().clone());
             }
         }
@@ -332,7 +366,9 @@ pub(crate) fn update_nodes(
         Changed<NekoUINode>,
     >,
 ) {
-    if q.is_empty() { return }
+    if q.is_empty() {
+        return;
+    }
 
     let t = Instant::now();
 
@@ -352,9 +388,9 @@ pub(crate) fn update_nodes(
     {
         // println!("Updating properties {:?} from {entity}",
         // neko_node.updated_properties);
-        
+
         if neko_node.updated_properties.is_empty() {
-            continue
+            continue;
         }
 
         let NekoUINode {
@@ -387,10 +423,7 @@ pub(crate) fn update_nodes(
         updated_properties.clear();
     }
 
-    debug!(
-        "Updated node properties in {} ms.",
-        t.elapsed().as_millis()
-    );
+    debug!("Updated node properties in {} ms.", t.elapsed().as_millis());
 }
 
 /// Listens for changes to the [`NekoMaidUI`] asset and updates any existing UI

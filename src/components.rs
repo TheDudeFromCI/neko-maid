@@ -39,13 +39,11 @@ impl NekoUINode {
     pub fn toggle_class(&mut self, class: &str) {
         if self.has_class(class) {
             self.element.remove_class(class);
-        }
-        else {
+        } else {
             self.element.add_class(class.to_owned());
         }
     }
 }
-
 
 /// A component representing the root of a NekoMaid UI tree.
 #[derive(Debug, Component)]
@@ -104,7 +102,8 @@ impl NekoUITree {
     /// Sets a variable to the specified value.
     pub fn set_variable(&mut self, name: &str, value: PropertyValue) {
         self.variables.insert(name.to_owned(), value);
-        self.update_names.insert(ScopeName::Variable(name.to_owned(), ScopeId(0)));
+        self.update_names
+            .insert(ScopeName::Variable(name.to_owned(), ScopeId(0)));
     }
 
     /// Marks the tree as dirty, indicating that it needs to be re-spawned.

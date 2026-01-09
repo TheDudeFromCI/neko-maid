@@ -23,10 +23,9 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn(NekoUITree::new(handle));
 }
 
-pub fn toggle_cell(
-    event: On<Remove, Pressed>,
-    mut nodes: Query<&mut NekoUINode, With<Pressed>>
-) {
-    let Ok(mut node) = nodes.get_mut(event.entity) else { return };
+pub fn toggle_cell(event: On<Remove, Pressed>, mut nodes: Query<&mut NekoUINode, With<Pressed>>) {
+    let Ok(mut node) = nodes.get_mut(event.entity) else {
+        return;
+    };
     node.toggle_class("active");
 }

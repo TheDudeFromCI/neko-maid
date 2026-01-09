@@ -36,7 +36,9 @@ impl FpsHistory {
         self.values.push_back(value);
 
         while self.values.len() > 10 {
-            let Some(v) = self.values.pop_front() else { break };
+            let Some(v) = self.values.pop_front() else {
+                break;
+            };
             self.sum -= v;
         }
     }
@@ -84,7 +86,9 @@ fn fps_text_update_system(
     mut query: Query<&mut Text, With<FpsText>>,
 ) {
     let t = time.elapsed_secs_f64();
-    if (t - history.last_update) < 0.1 { return }
+    if (t - history.last_update) < 0.1 {
+        return;
+    }
     history.last_update = t;
 
     let fps = diagnostics
@@ -139,7 +143,6 @@ impl Plugin for FpsCounter {
     }
 }
 
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -155,61 +158,62 @@ fn setup(mut commands: Commands) {
 
 pub fn spawn_ui(mut commands: Commands) {
     commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                row_gap: Val::Px(5.0),
-                ..default()
-            },
-        ))
+        .spawn((Node {
+            width: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(5.0),
+            ..default()
+        },))
         .with_children(|root| {
-            for _j in 0..20 {
+            for _j in 0 .. 20 {
                 // Row
-                root.spawn((
-                    Node {
-                        flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(5.0),
-                        ..default()
-                    },
-                ))
-                .with_children(|row| {
-                    for _i in 0..20 {
-                        // Outer gray box
-                        row.spawn((
-                            Node {
-                                padding: UiRect::all(Val::Px(5.0)),
-                                ..default()
-                            },
-                            BackgroundColor(Color::linear_rgb(13.0/16.0, 13.0/16.0, 13.0/16.0)),
-                        ))
-                        .with_children(|outer| {
-                            // Inner colored box ($random-color)
-                            outer.spawn((
+                root.spawn((Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(5.0),
+                    ..default()
+                },))
+                    .with_children(|row| {
+                        for _i in 0 .. 20 {
+                            // Outer gray box
+                            row.spawn((
                                 Node {
                                     padding: UiRect::all(Val::Px(5.0)),
                                     ..default()
                                 },
-                                UpdateColor,
-                                BackgroundColor(Color::WHITE),
+                                BackgroundColor(Color::linear_rgb(
+                                    13.0 / 16.0,
+                                    13.0 / 16.0,
+                                    13.0 / 16.0,
+                                )),
                             ))
-                            .with_children(|inner| {
-                                // Text node
-                                inner.spawn((
-                                    Text::new("Hi!"),
-                                    TextFont {
-                                        font_size: 20.0,
-                                        ..Default::default()
-                                    },
-                                    UpdateFontSize,
-                                    TextColor(Color::BLACK)
-                                ));
+                            .with_children(|outer| {
+                                // Inner colored box ($random-color)
+                                outer
+                                    .spawn((
+                                        Node {
+                                            padding: UiRect::all(Val::Px(5.0)),
+                                            ..default()
+                                        },
+                                        UpdateColor,
+                                        BackgroundColor(Color::WHITE),
+                                    ))
+                                    .with_children(|inner| {
+                                        // Text node
+                                        inner.spawn((
+                                            Text::new("Hi!"),
+                                            TextFont {
+                                                font_size: 20.0,
+                                                ..Default::default()
+                                            },
+                                            UpdateFontSize,
+                                            TextColor(Color::BLACK),
+                                        ));
+                                    });
                             });
-                        });
-                    }
-                });
+                        }
+                    });
             }
         });
 }
@@ -226,15 +230,17 @@ pub fn update_animation(
     bg_colors: Query<&mut BackgroundColor, With<UpdateColor>>,
     fonts: Query<&mut TextFont, With<UpdateFontSize>>,
 ) {
-    if mouse.pressed(MouseButton::Left) { return }
+    if mouse.pressed(MouseButton::Left) {
+        return;
+    }
 
     let h = (time.elapsed_secs_f64() % 4.0) / 4.0 * 360.0;
     let color = Color::hsl(h as f32, 0.5, 0.3);
-    
+
     for mut bg in bg_colors {
         bg.0 = color;
     }
-    
+
     let n = 20.0 + f64::sin(time.elapsed_secs_f64() * 5.0) * 5.0;
     for mut font in fonts {
         font.font_size = n as f32;

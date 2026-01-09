@@ -100,7 +100,6 @@ impl NekoElement {
             self.classpath_changed = true;
             self.added_classes.push(class)
         }
-        
     }
 
     /// Removes a class from the class path of this element.
@@ -122,8 +121,7 @@ impl NekoElement {
 
                 if active {
                     self.activated_styles.push(i);
-                }
-                else {
+                } else {
                     self.deactivated_styles.push(i);
                 }
             }
@@ -135,9 +133,7 @@ impl NekoElement {
     ///
     /// Styles earlier in the vector have lower precedence.
     pub fn active_styles(&self) -> impl Iterator<Item = &Style> {
-        self.styles.iter()
-            .filter(|e| e.active)
-            .map(|e| &e.value)
+        self.styles.iter().filter(|e| e.active).map(|e| &e.value)
     }
 
     /// Tries to add a style to the styles applied to this element. If the style
@@ -212,7 +208,9 @@ impl<'a> NekoElementView<'a> {
     }
     fn update_style_properties(&mut self, i: usize) {
         let style = &self.styles[i].value;
-        let Some(scope) = self.scopes.get(style.scope_id) else { return };
+        let Some(scope) = self.scopes.get(style.scope_id) else {
+            return;
+        };
         for name in scope.property_names() {
             let j = match self.active_properties.get(name) {
                 Some(j) => j.unwrap_or(usize::MAX),

@@ -135,7 +135,9 @@ impl ParseContext {
     /// Sets the value of a defined variable. If the variable already exists,
     /// its value is updated.
     pub(crate) fn set_variable(&mut self, name: &String, value: &UnresolvedPropertyValue) {
-        let Some(scope) = self.scope_tree.get_mut(ScopeId(0)) else { return };
+        let Some(scope) = self.scope_tree.get_mut(ScopeId(0)) else {
+            return;
+        };
         scope.add_variables([(name, value)]);
     }
 
@@ -195,8 +197,12 @@ impl ParseContext {
     pub(crate) fn add_style(&mut self, style: Style) {
         for existing_style in &mut self.styles {
             if existing_style.selector() == style.selector() {
-                let Some(scope) = self.scope_tree.get(style.scope_id).cloned() else { return };
-                let Some(existing_scope) = self.scope_tree.get_mut(style.scope_id) else { return };
+                let Some(scope) = self.scope_tree.get(style.scope_id).cloned() else {
+                    return;
+                };
+                let Some(existing_scope) = self.scope_tree.get_mut(style.scope_id) else {
+                    return;
+                };
                 existing_scope.merge(&scope);
                 return;
             }

@@ -17,18 +17,13 @@ pub struct Style {
     pub(crate) selector: Selector,
 
     /// The id of the scope containing the properties of this style.
-    pub(crate) scope_id: ScopeId
+    pub(crate) scope_id: ScopeId,
 }
 
 impl Style {
     /// Creates a new Style with the given selector and properties.
-    pub(crate) fn new(
-        selector: Selector, scope_id: ScopeId
-    ) -> Self {
-        Self {
-            selector,
-            scope_id,
-        }
+    pub(crate) fn new(selector: Selector, scope_id: ScopeId) -> Self {
+        Self { selector, scope_id }
     }
 
     /// Returns a reference to the selector of this style.
@@ -91,7 +86,7 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
             blacklist,
         });
     }
-    
+
     ctx.expect(TokenType::OpenBrace)?;
 
     let mut properties = vec![];
@@ -122,7 +117,6 @@ pub(super) fn parse_style(ctx: &mut ParseContext, mut selector: Selector) -> Nek
 
     ctx.expect(TokenType::CloseBrace)?;
 
-    
     if !properties.is_empty() {
         let scope = ctx.create_scope(ScopeId(0));
         scope.add_properties(properties.iter().map(|(k, v)| (k, v)));

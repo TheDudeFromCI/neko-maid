@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use crate::parse::element::NekoElementView;
 use crate::parse::value::PropertyValue;
 
-
 /// Partially updates the given components based on the current computed
 /// properties.
 pub fn update_node<'a>(
@@ -35,17 +34,23 @@ pub fn update_node<'a>(
             // basic layout
             "display" => node.display = element.get_as("display").unwrap_or_default(),
             "box-sizing" => node.box_sizing = element.get_as("box-sizing").unwrap_or_default(),
-            "position-type" => node.position_type = element.get_as("position-type").unwrap_or_default(),
+            "position-type" => {
+                node.position_type = element.get_as("position-type").unwrap_or_default()
+            }
             // overflow
             "overflow-x" => node.overflow.x = element.get_as("overflow-x").unwrap_or_default(),
             "overflow-y" => node.overflow.y = element.get_as("overflow-y").unwrap_or_default(),
-            "scrollbar-width" => node.scrollbar_width = element.get_as("scrollbar-width").unwrap_or_default(),
+            "scrollbar-width" => {
+                node.scrollbar_width = element.get_as("scrollbar-width").unwrap_or_default()
+            }
             "overflow-clip-margin-box" => {
-                node.overflow_clip_margin.visual_box =
-                    element.get_as("overflow-clip-margin-box").unwrap_or_default()
+                node.overflow_clip_margin.visual_box = element
+                    .get_as("overflow-clip-margin-box")
+                    .unwrap_or_default()
             }
             "overflow-clip-margin" => {
-                node.overflow_clip_margin.margin = element.get_as("overflow-clip-margin").unwrap_or_default()
+                node.overflow_clip_margin.margin =
+                    element.get_as("overflow-clip-margin").unwrap_or_default()
             }
             // positioning
             "left" => node.left = element.get_as("left").unwrap_or_default(),
@@ -59,14 +64,24 @@ pub fn update_node<'a>(
             "min-height" => node.min_height = element.get_as("min-height").unwrap_or_default(),
             "max-width" => node.max_width = element.get_as("max-width").unwrap_or_default(),
             "max-height" => node.max_height = element.get_as("max-height").unwrap_or_default(),
-            "aspect-ratio" => node.aspect_ratio = element.get_as("aspect-ratio").unwrap_or_default(),
+            "aspect-ratio" => {
+                node.aspect_ratio = element.get_as("aspect-ratio").unwrap_or_default()
+            }
             // alignment
             "align-items" => node.align_items = element.get_as("align-items").unwrap_or_default(),
-            "justify-items" => node.justify_items = element.get_as("justify-items").unwrap_or_default(),
+            "justify-items" => {
+                node.justify_items = element.get_as("justify-items").unwrap_or_default()
+            }
             "align-self" => node.align_self = element.get_as("align-self").unwrap_or_default(),
-            "justify-self" => node.justify_self = element.get_as("justify-self").unwrap_or_default(),
-            "align-content" => node.align_content = element.get_as("align-content").unwrap_or_default(),
-            "justify-content" => node.justify_content = element.get_as("justify-content").unwrap_or_default(),
+            "justify-self" => {
+                node.justify_self = element.get_as("justify-self").unwrap_or_default()
+            }
+            "align-content" => {
+                node.align_content = element.get_as("align-content").unwrap_or_default()
+            }
+            "justify-content" => {
+                node.justify_content = element.get_as("justify-content").unwrap_or_default()
+            }
             // margin
             "margin-top" | "margin-left" | "margin-right" | "margin-bottom" | "margin" => {
                 let margin = element.get_as("margin").unwrap_or(Val::Px(0.0));
@@ -96,7 +111,9 @@ pub fn update_node<'a>(
                 node.border.bottom = element.get_as_or("border-thickness-bottom", border);
             }
             // flex
-            "flex-direction" => node.flex_direction = element.get_as("flex-direction").unwrap_or_default(),
+            "flex-direction" => {
+                node.flex_direction = element.get_as("flex-direction").unwrap_or_default()
+            }
             "flex-wrap" => node.flex_wrap = element.get_as("flex-wrap").unwrap_or_default(),
             "flex-grow" => node.flex_grow = element.get_as("flex-grow").unwrap_or_default(),
             "flex-shrink" => node.flex_shrink = element.get_as("flex-shrink").unwrap_or(1.0),
@@ -105,7 +122,9 @@ pub fn update_node<'a>(
             "row-gap" => node.row_gap = element.get_as("row-gap").unwrap_or_default(),
             "column-gap" => node.column_gap = element.get_as("column-gap").unwrap_or_default(),
             // grid
-            "grid-auto-flow" => node.grid_auto_flow = element.get_as("grid-auto-flow").unwrap_or_default(),
+            "grid-auto-flow" => {
+                node.grid_auto_flow = element.get_as("grid-auto-flow").unwrap_or_default()
+            }
 
             // --- border color ---
             "border-color-top"
@@ -133,7 +152,9 @@ pub fn update_node<'a>(
                 border_radius.bottom_right = element.get_as_or("border-radius-bottom-right", radius)
             }
             // --- background color ---
-            "background-color" => background_color.0 = element.get_as("background-color").unwrap_or(Color::NONE),
+            "background-color" => {
+                background_color.0 = element.get_as("background-color").unwrap_or(Color::NONE)
+            }
             "tint" => {
                 if let Some(image) = image {
                     image.color = element.get_as("tint").unwrap_or(Color::WHITE)
@@ -145,8 +166,7 @@ pub fn update_node<'a>(
                 if let Some(image) = image {
                     image.image = if let Some(src) = element.get_as::<String>("src") {
                         asset_server.load(src)
-                    }
-                    else {
+                    } else {
                         TRANSPARENT_IMAGE_HANDLE
                     }
                 }
@@ -291,7 +311,9 @@ pub fn update_node<'a>(
                 if let Some(layout) = layout {
                     match property.as_str() {
                         "justify" => layout.justify = element.get_as("justify").unwrap_or_default(),
-                        "line-break" => layout.linebreak = element.get_as("line-break").unwrap_or_default(),
+                        "line-break" => {
+                            layout.linebreak = element.get_as("line-break").unwrap_or_default()
+                        }
                         _ => {}
                     }
                 }

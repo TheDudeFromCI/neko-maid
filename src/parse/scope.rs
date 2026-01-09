@@ -38,7 +38,7 @@ impl ScopeName {
             ScopeName::Property(name, _) => name,
         }
     }
-    
+
     /// Returns the id of the scope that owns this scope name.
     pub fn scope_id(&self) -> ScopeId {
         match self {
@@ -110,17 +110,19 @@ impl Scope {
     }
 
     pub fn property_names(&self) -> impl Iterator<Item = &String> {
-        self.properties
-            .iter()
-            .map(|(name, _)| name)
+        self.properties.iter().map(|(name, _)| name)
     }
 
-    pub fn items(&self) -> impl Iterator<Item=(ScopeName, &ScopeItem)> {
-        let variables = self.variables.iter()
+    pub fn items(&self) -> impl Iterator<Item = (ScopeName, &ScopeItem)> {
+        let variables = self
+            .variables
+            .iter()
             .map(|(name, entry)| (ScopeName::Variable(name.clone(), self.id), entry));
-        let properties = self.properties.iter()
+        let properties = self
+            .properties
+            .iter()
             .map(|(name, entry)| (ScopeName::Property(name.clone(), self.id), entry));
-        
+
         variables.chain(properties)
     }
 
@@ -130,7 +132,9 @@ impl Scope {
     }
 
     pub fn add_variables<'a, I>(&mut self, variables: I)
-    where I: IntoIterator<Item = (&'a String, &'a UnresolvedPropertyValue)> {
+    where
+        I: IntoIterator<Item = (&'a String, &'a UnresolvedPropertyValue)>,
+    {
         for (name, value) in variables {
             self.variables.insert(
                 name.clone(),
@@ -143,7 +147,9 @@ impl Scope {
     }
 
     pub fn add_resolved_variables<'a, I>(&mut self, variables: I)
-    where I: IntoIterator<Item = (&'a String, &'a PropertyValue)> {
+    where
+        I: IntoIterator<Item = (&'a String, &'a PropertyValue)>,
+    {
         for (name, value) in variables {
             self.variables.insert(
                 name.clone(),
@@ -156,7 +162,9 @@ impl Scope {
     }
 
     pub fn add_properties<'a, I>(&mut self, properties: I)
-    where I: IntoIterator<Item = (&'a String, &'a UnresolvedPropertyValue)> {
+    where
+        I: IntoIterator<Item = (&'a String, &'a UnresolvedPropertyValue)>,
+    {
         for (name, value) in properties {
             self.properties.insert(
                 name.clone(),
@@ -169,12 +177,21 @@ impl Scope {
     }
 
     pub fn merge(&mut self, other: &Scope) {
-        self.add_properties(other.properties.iter().map(|(name, item)| (name, &item.unresolved)));
-        self.add_variables(other.variables.iter().map(|(name, item)| (name, &item.unresolved)));
+        self.add_properties(
+            other
+                .properties
+                .iter()
+                .map(|(name, item)| (name, &item.unresolved)),
+        );
+        self.add_variables(
+            other
+                .variables
+                .iter()
+                .map(|(name, item)| (name, &item.unresolved)),
+        );
         self.children.extend(other.children.iter().cloned());
     }
 }
-
 
 lazy_static! {
     pub(crate) static ref EMPTY_SET: HashSet<ScopeName> = HashSet::new();
@@ -189,7 +206,8 @@ pub(crate) struct DependencyGraph {
     /// A map for defining usage dependencies between scope names.
     /// Maps a scope name to other scope names that depend on it for evaluation.
     reverse_map: HashMap<ScopeName, HashSet<ScopeName>>,
-    /// The topologically sorted order for the scope names in this dependency graph.
+    /// The topologically sorted order for the scope names in this dependency
+    /// graph.
     order_list: Option<Vec<ScopeName>>,
     /// A map for easily getting the order of scope names.
     order_map: Option<HashMap<ScopeName, usize>>,
@@ -358,13 +376,13 @@ impl ScopeTree {
         let Some(scope) = self.get_mut(name.scope_id()) else {
             return None;
         };
-        
+
         match name {
             ScopeName::Variable(name, _) => scope.variables.get_mut(name),
             ScopeName::Property(name, _) => scope.properties.get_mut(name),
         }
     }
-    
+
     /// Returns a reference for an item based on scope name.
     pub fn get_entry(&self, name: &ScopeName) -> Option<&ScopeItem> {
         let Some(scope) = self.get(name.scope_id()) else {
@@ -373,9 +391,10 @@ impl ScopeTree {
         scope.get(name)
     }
 
-    /// Finds the variable with `name` defined in the `start` scope or any of its parents
-    /// in the hierarchy. Returns the variable item and the id of the scope that owns the variable,
-    /// if any, otherwise returns `None`.
+    /// Finds the variable with `name` defined in the `start` scope or any of
+    /// its parents in the hierarchy. Returns the variable item and the id
+    /// of the scope that owns the variable, if any, otherwise returns
+    /// `None`.
     pub fn find_variable(&self, name: &String, start: ScopeId) -> Option<(&ScopeItem, ScopeId)> {
         let mut scope = self.get(start)?;
 
@@ -521,7 +540,6 @@ impl ScopeTree {
     }
 }
 
-
 lazy_static! {
     static ref EMPTY_ENTITY_SET: HashSet<Entity> = HashSet::new();
 }
@@ -530,7 +548,7 @@ lazy_static! {
 #[derive(Debug, Deref, DerefMut, Default)]
 pub(crate) struct ScopeNotificationMap {
     #[deref]
-    map: HashMap<ScopeId, HashSet<Entity>>
+    map: HashMap<ScopeId, HashSet<Entity>>,
 }
 impl ScopeNotificationMap {
     /// Register a node entity as listener to the scope specified.
@@ -543,8 +561,13 @@ impl ScopeNotificationMap {
         self.map.entry(scope).or_default().remove(&entity);
     }
 
-    /// Returns an iterator of node entities that listen to changes in the given scope.
-    pub fn get(&self, scope: ScopeId) -> impl Iterator<Item=Entity> {
-        self.map.get(&scope).unwrap_or(&EMPTY_ENTITY_SET).iter().cloned()
+    /// Returns an iterator of node entities that listen to changes in the given
+    /// scope.
+    pub fn get(&self, scope: ScopeId) -> impl Iterator<Item = Entity> {
+        self.map
+            .get(&scope)
+            .unwrap_or(&EMPTY_ENTITY_SET)
+            .iter()
+            .cloned()
     }
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use neko_maid::{components::{NekoUINode, NekoUITree}, marker::{MarkerAppExt, NekoMarker}};
-
+use neko_maid::components::{NekoUINode, NekoUITree};
+use neko_maid::marker::{MarkerAppExt, NekoMarker};
 
 #[derive(Component, NekoMarker)]
 #[neko_marker("hovered")]
@@ -9,7 +9,6 @@ pub struct Hovered;
 #[derive(Component, NekoMarker)]
 #[neko_marker("pressed")]
 pub struct Pressed;
-
 
 fn main() {
     App::new()
@@ -32,34 +31,30 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     commands.spawn(NekoUITree::new(handle));
 }
 
-pub fn hover_start(
-    event: On<Add, Hovered>,
-    mut nodes: Query<&mut NekoUINode, With<Hovered>>,
-) {
-    let Ok(_) = nodes.get_mut(event.entity) else { return };
+pub fn hover_start(event: On<Add, Hovered>, mut nodes: Query<&mut NekoUINode, With<Hovered>>) {
+    let Ok(_) = nodes.get_mut(event.entity) else {
+        return;
+    };
     println!("node hovered");
 }
 
-pub fn hover_end(
-    event: On<Remove, Hovered>,
-    mut nodes: Query<&mut NekoUINode, With<Hovered>>,
-) {
-    let Ok(_) = nodes.get_mut(event.entity) else { return };
+pub fn hover_end(event: On<Remove, Hovered>, mut nodes: Query<&mut NekoUINode, With<Hovered>>) {
+    let Ok(_) = nodes.get_mut(event.entity) else {
+        return;
+    };
     println!("node unhovered");
 }
 
-pub fn pressed(
-    event: On<Add, Pressed>,
-    mut nodes: Query<&mut NekoUINode, With<Pressed>>,
-) {
-    let Ok(_) = nodes.get_mut(event.entity) else { return };
+pub fn pressed(event: On<Add, Pressed>, mut nodes: Query<&mut NekoUINode, With<Pressed>>) {
+    let Ok(_) = nodes.get_mut(event.entity) else {
+        return;
+    };
     println!("node pressed: ");
 }
 
-pub fn released(
-    event: On<Remove, Pressed>,
-    mut nodes: Query<&mut NekoUINode, With<Pressed>>,
-) {
-    let Ok(_) = nodes.get_mut(event.entity) else { return };
+pub fn released(event: On<Remove, Pressed>, mut nodes: Query<&mut NekoUINode, With<Pressed>>) {
+    let Ok(_) = nodes.get_mut(event.entity) else {
+        return;
+    };
     println!("node released");
 }
