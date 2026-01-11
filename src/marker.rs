@@ -30,8 +30,8 @@ use bevy::ecs::bundle::Bundle;
 use bevy::ecs::resource::Resource;
 use bevy::ecs::system::EntityCommands;
 use bevy::platform::collections::HashMap;
-
-use crate::parse::element::NekoElement;
+use bevy::ui::Interaction;
+pub use neko_derive::NekoMarker;
 
 /// The marker trait. It can easily be implemented with derive.
 ///
@@ -52,23 +52,68 @@ pub trait NekoMarker: 'static {
         Self: Sized;
 }
 
-/// The marker factory.
-pub type MarkerFactory = Box<dyn Fn(&mut EntityCommands) + Send + Sync>;
+// Makes elements optionally interactable through the `interactable` class.
+impl NekoMarker for Interaction {
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
+        Interaction::default()
+    }
+
+    fn id() -> &'static str
+    where
+        Self: Sized,
+    {
+        "interactable"
+    }
+}
+
+/// The marker insert/remove function.
+pub type MarkerFunction = Box<dyn Fn(&mut EntityCommands) + Send + Sync>;
 
 /// A resource for managing registered marker types.
 #[derive(Default, Resource)]
 pub struct MarkerRegistry {
-    /// Maps marker names to marker factories.
-    factories: HashMap<String, MarkerFactory>,
+    /// Maps marker names to marker inserters.
+    inserters: HashMap<String, Vec<MarkerFunction>>,
+    /// Maps marker names to marker removers.
+    removers: HashMap<String, Vec<MarkerFunction>>,
 }
 
 impl MarkerRegistry {
-    /// Inserts the marker component to an entity given its element.
-    pub fn insert(&self, mut entity: EntityCommands, element: &NekoElement) {
-        for class in element.classes() {
-            let Some(f) = self.factories.get(class) else {
-                continue;
-            };
+    /// Registers the specified marker component.
+    pub fn add_marker<T: NekoMarker + Bundle>(&mut self) {
+        self.inserters
+            .entry(T::id().to_owned())
+            .or_default()
+            .push(Box::new(|entity| {
+                entity.insert(T::new());
+            }));
+        self.removers
+            .entry(T::id().to_owned())
+            .or_default()
+            .push(Box::new(|entity| {
+                entity.remove::<T>();
+            }));
+    }
+
+    /// Inserts the associated class marker components to the node entity.
+    pub fn insert(&self, mut entity: EntityCommands, class: &str) {
+        let Some(inserters) = self.inserters.get(class) else {
+            return;
+        };
+        for f in inserters {
+            f(&mut entity);
+        }
+    }
+
+    /// Removes the associated class marker components from the node entity.
+    pub fn remove(&self, mut entity: EntityCommands, class: &str) {
+        let Some(removers) = self.removers.get(class) else {
+            return;
+        };
+        for f in removers {
             f(&mut entity);
         }
     }
@@ -89,14 +134,7 @@ impl MarkerAppExt for App {
         self.init_resource::<MarkerRegistry>()
             .world_mut()
             .resource_mut::<MarkerRegistry>()
-            .factories
-            .insert(
-                T::id().to_owned(),
-                Box::new(|entity| {
-                    entity.insert(T::new());
-                }),
-            );
-
+            .add_marker::<T>();
         self
     }
 }

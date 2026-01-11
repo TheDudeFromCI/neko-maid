@@ -75,6 +75,19 @@ impl ClassPath {
         true
     }
 
+    /// Returns a reference to the i-th [`ClassSet`] in relation to the path's
+    /// end.
+    pub fn get(&self, i: usize) -> Option<&ClassSet> {
+        self.hierarchy.get(self.hierarchy.len() - i - 1)
+    }
+
+    /// Returns a mutable reference to the i-th [`ClassSet`] in relation to the
+    /// path's end.
+    pub fn get_mut(&mut self, i: usize) -> Option<&mut ClassSet> {
+        let len = self.hierarchy.len();
+        self.hierarchy.get_mut(len - i - 1)
+    }
+
     /// Returns the last [`ClassSet`] in the class path.
     pub fn last(&self) -> &ClassSet {
         self.hierarchy.last().unwrap()

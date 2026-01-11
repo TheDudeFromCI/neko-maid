@@ -2,7 +2,6 @@
 
 use std::fmt;
 
-use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::parse::NekoMaidParseError;
@@ -30,21 +29,11 @@ pub(crate) enum UnresolvedPropertyValue {
     Variable(String),
 }
 
-impl UnresolvedPropertyValue {
-    /// Resolves the property value using the provided variable map.
-    pub fn resolve(&self, variables: &HashMap<String, PropertyValue>) -> NekoResult<PropertyValue> {
+impl fmt::Display for UnresolvedPropertyValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UnresolvedPropertyValue::Constant(v) => Ok(v.clone()),
-            UnresolvedPropertyValue::Variable(var_name) => {
-                if let Some(v) = variables.get(var_name) {
-                    Ok(v.clone())
-                } else {
-                    Err(NekoMaidParseError::VariableNotFound {
-                        variable: var_name.clone(),
-                        position: Default::default(),
-                    })
-                }
-            }
+            UnresolvedPropertyValue::Constant(value) => write!(f, "{}", value),
+            UnresolvedPropertyValue::Variable(name) => write!(f, "${}", name),
         }
     }
 }
