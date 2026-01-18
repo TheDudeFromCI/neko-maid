@@ -1,0 +1,103 @@
+Module = { SOI ~ (Import | VarAssign | ConstAssign | ("def" ~ Widget) | ("layout" ~ Layout) | ("style" ~ Style) )* ~ EOI }
+
+Import = { "import" ~ String ~ ";" }
+
+VariableName = @{ Identifier }
+VarAssign = { "var" ~ VariableName ~ "=" ~ Expr ~ ";" }
+ConstAssign = { "const" ~ VariableName ~ "=" ~ Expr ~ ";" }
+PropertyVarAssign = { "property" ~ VariableName ~ "=" ~ Expr ~ ";" }
+
+WidgetName = @{ Identifier }
+Widget = { WidgetName ~ "{" ~ WidgetHeader ~ "layout" ~ WidgetLayout ~ "}" }
+WidgetHeader = { (VarAssign | PropertyVarAssign | ConstAssign)* }
+WidgetLayout = { WidgetName ~ LayoutModifiers ~ (";" | "{" ~ WidgetLayoutBody ~ "}") }
+WidgetLayoutBody = { (ClassAssign | PropertyAssign | OutputAssign | ("with" ~ WidgetLayout))* }
+
+Layout = { WidgetName ~ LayoutModifiers ~ (";" | "{" ~ LayoutBody ~ "}") }
+LayoutBody = { (ClassAssign | PropertyAssign | ("with" ~ Layout))* }
+
+LayoutModifiers = { InModifier? ~ (ForModifier | MapModifier)? ~ IfModifier? }
+InModifier = { "in" ~ OutputName }
+IfModifier = { "if" ~ Expr }
+ForModifier = { "for" ~ "var" ~ VariableName ~ "in" ~ Expr }
+MapModifier = { "map" ~ Expr }
+
+Style = { StyleWidget ~ StyleSelector ~ InModifier? ~ "{" ~ StyleBody ~ "}" }
+StyleBody = { (PropertyAssign | ("with" ~ Style))* }
+StyleWidget = { WidgetName | "*" }
+StyleSelector = { (WithClass | WithoutClass)* }
+WithClass = { "+" ~ ClassName }
+WithoutClass = { "!" ~ ClassName }
+
+ClassName = @{ Identifier }
+ClassAssign = { "class" ~ ClassName ~ IfModifier? ~ ";" }
+
+PropertyName = @{ Identifier }
+PropertyAssign = { PropertyName ~ ":" ~ Expr ~ ";" }
+
+OutputName = @{ Identifier }
+OutputAssign = { "output" ~ OutputName? ~ ";" }
+
+DoubleQuoteStr = ${ "\"" ~ DoubleQuoteStrInner ~ "\"" }
+DoubleQuoteStrInner = @{ DoubleQuoteChar* }
+DoubleQuoteChar = { !("\"") ~ ANY }
+
+SingleQuoteStr = ${ "'" ~ SingleQuoteStrInner ~ "'" }
+SingleQuoteStrInner = @{ SingleQuoteChar* }
+SingleQuoteChar = { !("'") ~ ANY }
+
+TickQuoteStr = ${ "`" ~ TickQuoteStrInner ~ "`" }
+TickQuoteStrInner = @{ TickQuoteChar* }
+TickQuoteChar = { !("`") ~ ANY }
+
+SimpleString = @{ Identifier }
+
+String = { DoubleQuoteStr | SingleQuoteStr | TickQuoteStr | SimpleString }
+Boolean = { "true" | "false" }
+Number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+Pixels = ${ Number ~ "px" }
+Percent = ${ Number ~ "%" }
+Color = @{ "#" ~ (Hex8 | Hex6 | Hex4 | Hex3) }
+List = { "[" ~ (Expr ~ ("," ~ Expr)*)? ~ ","? ~ "]" }
+Dict = { "{" ~ (KeyValuePair ~ ("," ~ KeyValuePair)*)? ~ ","? ~ "}" }
+
+KeyValuePair = { (PropertyName | String) ~ ":" ~ Expr }
+
+Hex3 = @{ ASCII_HEX_DIGIT{3} }
+Hex4 = @{ ASCII_HEX_DIGIT{4} }
+Hex6 = @{ ASCII_HEX_DIGIT{6} }
+Hex8 = @{ ASCII_HEX_DIGIT{8} }
+
+Identifier = @{ IdentifierCharLead ~ IdentifierCharTrail* }
+IdentifierCharLead = { ASCII_ALPHA | "_" }
+IdentifierCharTrail = { ASCII_ALPHANUMERIC | "_" | "-" }
+
+Constant = { Boolean | Color | Pixels | Percent | Number | String | List | Dict }
+VariableRef = ${ "$" ~ VariableName }
+
+Invert = { "not" | "!" }
+NumberSign = { "-" | "+" }
+
+AddSub = { "+" | "-" }
+MulDiv = { "*" | "/" }
+Pow = { "^" | "**" }
+RangeOp = { "..=" | ".." }
+CompareOp = { "<=" | ">=" | "==" | "!=" | "<" | ">" | "is" }
+BooleanOp = { "and" | "or" | "&&" | "||" }
+
+PropertyAccess = { "." ~ Identifier }
+ListAccess = { "[" ~ Expr ~ "]" }
+
+Term = { (Group | FunctionCall | VariableRef | Constant) ~ (PropertyAccess | ListAccess)* }
+IfElseExpr = { "if" ~ Expr ~ "then" ~ Expr ~ "else" ~ Expr }
+
+Group = { "(" ~ Expr ~ ")" }
+FunctionCall = { Identifier ~ "(" ~ (Expr ~ ("," ~ Expr)*)? ~ ","? ~ ")" }
+
+ExprPrefix = _{ Invert | NumberSign }
+ExprInfix = _{ AddSub | MulDiv | Pow | RangeOp | CompareOp | BooleanOp }
+ExprPrimary = _{ IfElseExpr | Term }
+Expr = { ExprPrefix? ~ ExprPrimary ~ (ExprInfix ~ ExprPrefix? ~ ExprPrimary )* }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* ~ ("\n" | EOI) }

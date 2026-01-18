@@ -7,7 +7,7 @@ edition = "2024"
 members = ["neko_derive"]
 
 [dependencies]
-neko_derive = { path="./neko_derive" }
+neko_derive = { path = "./neko_derive" }
 bevy = { version = "0.17", default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_render",
@@ -20,6 +20,8 @@ bevy = { version = "0.17", default-features = false, features = [
 lazy_static = "1.5"
 regex = "1.12"
 thiserror = "2"
+pest = "2.8"
+pest_derive = "2.8"
 
 [dev-dependencies]
 bevy = { version = "0.17", default-features = true }
