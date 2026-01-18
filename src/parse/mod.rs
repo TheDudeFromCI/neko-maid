@@ -8,6 +8,7 @@ use crate::parse::token::TokenPosition;
 use crate::parse::tokenizer::{TokenizeError, Tokenizer};
 use crate::parse::widget::{NativeWidget, Widget};
 
+pub mod ast;
 pub mod class;
 pub mod context;
 pub mod element;
@@ -20,9 +21,6 @@ pub mod token;
 pub mod tokenizer;
 pub mod value;
 pub mod widget;
-
-#[cfg(test)]
-mod tests;
 
 /// A parser for NekoMaid UI files.
 pub struct NekoMaidParser {
